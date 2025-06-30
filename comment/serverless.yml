@@ -157,10 +157,12 @@ functions:
   # --------------- STRIPE FUNCTIONS -------------
 
   createPayemtIntent:
-    handler: functions/user-payments/createPayemtIntent.handler
+    handler: functions/user-payments/createPaymentIntent.handler
     events:
       - http:
           path: /create-payment-intent
           method: post
           private: true
           cors: true
+    layers:
+      - arn:aws:lambda:${self:provider.region}:${aws:accountId}:layer:stripe-layer:2

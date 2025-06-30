@@ -1,4 +1,4 @@
-import { PDFDocument, rgb,StandardFonts } from "pdf-lib";
+import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import { v4 as uuidv4 } from "uuid";
 import ShortUniqueId from "short-unique-id";
 import { getItem, createItemInDynamoDB } from "../../helpers/dynamodb.js";
@@ -50,7 +50,8 @@ export const handler = async (event) => {
 
     // Handle certificate generation if passed
     let certificateUrl = null;
-    if (passed) {
+
+    if (passed && user?.credits > 25) {
       const formattedDateTime = moment()
         .utc()
         .format("Do MMMM YYYY HH:mm:ss [UTC]");
@@ -72,6 +73,7 @@ export const handler = async (event) => {
         score: percentageScore,
         quizName: quiz?.name,
       };
+
       await createCertificateRecord(
         certificateId,
         quizId,
@@ -112,7 +114,6 @@ const validateInput = (quizId, userId, answers) => {
     throw new Error("Answers must be a non-empty array");
   }
 };
-
 
 const fetchUser = async (userId) => {
   const userResult = await getItem(TABLE_NAME.USERS, { id: userId });
@@ -201,10 +202,12 @@ const createQuizSubmission = async (
   return { submissionItem, correctCount, totalScore, percentageScore };
 };
 
-const getAutoFontSize = (font, text, wrapWidth, {
-  defaultSize = 60,
-  minSize     = 14,
-} = {}) => {
+const getAutoFontSize = (
+  font,
+  text,
+  wrapWidth,
+  { defaultSize = 60, minSize = 14 } = {}
+) => {
   // width of the text at size = 1
   const unitWidth = font.widthOfTextAtSize(text, 1);
   // ideal size so that unitWidth * size ≤ wrapWidth
@@ -212,7 +215,6 @@ const getAutoFontSize = (font, text, wrapWidth, {
   // clamp between minSize and defaultSize
   return Math.max(minSize, Math.min(defaultSize, idealSize));
 };
-
 
 const generateCertificate = async ({
   bucket,
@@ -233,7 +235,7 @@ const generateCertificate = async ({
   // Compute a size that exactly fits the name into wrapWidth
   const nameSize = getAutoFontSize(font, fields.name, wrapWidth, {
     defaultSize: 48,
-    minSize:     16,
+    minSize: 16,
   });
   // Draw user name
   page.drawText(fields.name, {

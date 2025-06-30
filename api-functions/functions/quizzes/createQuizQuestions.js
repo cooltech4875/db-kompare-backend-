@@ -44,12 +44,14 @@ export const handler = async (event) => {
     // 3. Pre-fetch all unique categories needed
     const uniqueCategories = [
       ...new Set(
-        questionArray.map((q) => (q.categoryy || categ).trim()).filter(Boolean)
+        questionArray.map((q) => (q.category || categ).trim()).filter(Boolean)
       ),
     ];
-    // const uniqueCategories = [...new Set(
-    //   questionArray.map(q => (q.category || "Other").trim()).filter(Boolean)
-    // )];
+
+    console.log(
+      "Uploading new quiz questions with categories:",
+      uniqueCategories.join(", ")
+    );
 
     const categoryMap = {};
     await Promise.all(
@@ -66,7 +68,7 @@ export const handler = async (event) => {
         explanation = "",
         image = null,
         difficulty = "HARD",
-        // category = "Other",
+        category = categ,
 
         tags = [],
       } = raw ?? {};
@@ -113,8 +115,8 @@ export const handler = async (event) => {
         explanation,
         image,
         difficulty,
-        category: categoryMap[categ] || null,
-        // category: categoryMap[category.trim()] || null,
+        // category: categoryMap[categ] || null,
+        category: categoryMap[category.trim()] || null,
         tags: Array.isArray(tags) ? tags : [],
         status: QUERY_STATUS.ACTIVE,
         questionNo: existingQuestionCount + idx + 1, // Sequential numbering
