@@ -1,7 +1,7 @@
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import { v4 as uuidv4 } from "uuid";
 import ShortUniqueId from "short-unique-id";
-import { getItem, createItemInDynamoDB } from "../../helpers/dynamodb.js";
+import { getItem } from "../../helpers/dynamodb.js";
 import { fetchBufferFromS3, uploadBufferToS3 } from "../../helpers/s3.js";
 import {
   TABLE_NAME,
@@ -11,6 +11,7 @@ import {
 import { getTimestamp, sendResponse } from "../../helpers/helpers.js";
 import moment from "moment";
 import { fetchQuizWithQuestions } from "../common/quizzes.js";
+import { transactWriteInDynamoDB } from "../../helpers/dynamodb.js";
 
 const uid = new ShortUniqueId({ length: 12 });
 
@@ -32,26 +33,56 @@ export const handler = async (event) => {
       quiz.questions,
       answers
     );
+
+
     const percentageScore = (correctCount / quiz.questions.length) * 100;
     const passed = percentageScore >= quiz.passingPerc;
 
+
     const certificateId = passed ? uid.rnd().toUpperCase() : null;
 
-    // Create submission record (includes certificateId if passed)
-    await createQuizSubmission(
-      quiz,
+    // Prepare transaction items
+    const transactionItems = [];
+
+    // Quiz submission item
+    const submissionItem = {
+      id: submissionId,
+      quizId: quiz.id,
       userId,
+      createdAt: getTimestamp(),
       answers,
-      submissionId,
-      passed,
-      certificateId,
-      percentageScore
-    );
+      correctCount,
+      totalQuestions: quiz.questions.length,
+      totalScore,
+      percentageScore,
+      passingPercentage: quiz.passingPerc,
+      status: passed
+        ? QUIZ_SUBMISSION_STATUS.PASSED
+        : QUIZ_SUBMISSION_STATUS.FAILED,
+      ...(passed && { certificateId }),
+      quizDetails: {
+        name: quiz.name,
+        category: quiz.category,
+        difficulty: quiz.difficulty,
+      },
+    };
+    transactionItems.push({
+      Put: {
+        TableName: TABLE_NAME.QUIZZES_SUBMISSIONS,
+        Item: submissionItem,
+        ConditionExpression: "attribute_not_exists(id)",
+      },
+    });
 
     // Handle certificate generation if passed
     let certificateUrl = null;
 
-    if (passed && user?.credits > 25) {
+    // if user has less than 25 credits, set eligibibleForCredits to FALSE
+    // if user has more than 25 credits, set eligibibleForCredits to TRUE because user has to pay 10 euro to get the certificate
+    const isEligibleForCredits =
+      user?.certificateCredits > 25 ? "TRUE" : "FALSE";
+
+    if (passed) {
       const formattedDateTime = moment()
         .utc()
         .format("Do MMMM YYYY HH:mm:ss [UTC]");
@@ -74,14 +105,43 @@ export const handler = async (event) => {
         quizName: quiz?.name,
       };
 
-      await createCertificateRecord(
-        certificateId,
-        quizId,
+      // Certificate record item
+      const certificateItem = {
+        id: certificateId,
+        subjectId: quizId,
         userId,
         submissionId,
-        metaData
-      );
-    }
+        issueDate: getTimestamp(),
+        status: QUERY_STATUS.ACTIVE,
+        metaData,
+        eligibibleForCredits: isEligibleForCredits,
+      };
+      transactionItems.push({
+        Put: {
+          TableName: TABLE_NAME.CERTIFICATES,
+          Item: certificateItem,
+          ConditionExpression: "attribute_not_exists(id)",
+        },
+      });
+
+      // Increment certificate credits
+      transactionItems.push({
+        Update: {
+          TableName: TABLE_NAME.USERS,
+          Key: { id: userId },
+          UpdateExpression:
+            "SET certificateCredits = if_not_exists(certificateCredits, :start) + :inc",
+          ExpressionAttributeValues: {
+            ":inc": 1,
+            ":start": 0,
+          },
+          ConditionExpression: "attribute_exists(id)",
+        },
+      });
+    } 
+
+    // Execute all operations in a single transaction
+    await transactWriteInDynamoDB({ TransactItems: transactionItems });
 
     // Return response
     return sendResponse(200, "Quiz submitted successfully", {
@@ -91,6 +151,7 @@ export const handler = async (event) => {
       percentageScore: Math.round(percentageScore),
       passed,
       passingPercentage: quiz?.passingPerc,
+      eligibibleForCredits: isEligibleForCredits,
       certificateUrl,
       certificateId,
     });
@@ -154,52 +215,6 @@ const calculateQuizScore = (questions, userAnswers) => {
   });
 
   return { correctCount, totalScore };
-};
-
-const createQuizSubmission = async (
-  quiz,
-  userId,
-  answers,
-  submissionId,
-  passed,
-  certificateId = null
-) => {
-  const { correctCount, totalScore } = calculateQuizScore(
-    quiz.questions,
-    answers
-  );
-  const percentageScore = (correctCount / quiz.questions.length) * 100;
-
-  const submissionItem = {
-    id: submissionId,
-    quizId: quiz.id,
-    userId,
-    createdAt: getTimestamp(),
-    answers,
-    correctCount,
-    totalQuestions: quiz.questions.length,
-    totalScore,
-    percentageScore,
-    passingPercentage: quiz.passingPerc,
-    status: passed
-      ? QUIZ_SUBMISSION_STATUS.PASSED
-      : QUIZ_SUBMISSION_STATUS.FAILED,
-    ...(passed && { certificateId }), // Only include certificateId if passed
-    quizDetails: {
-      name: quiz.name,
-      category: quiz.category,
-      difficulty: quiz.difficulty,
-    },
-  };
-
-  await createItemInDynamoDB(
-    submissionItem,
-    TABLE_NAME.QUIZZES_SUBMISSIONS,
-    { "#id": "id" },
-    "attribute_not_exists(#id)"
-  );
-
-  return { submissionItem, correctCount, totalScore, percentageScore };
 };
 
 const getAutoFontSize = (
@@ -286,29 +301,4 @@ const generateCertificate = async ({
   );
 
   return `s3://${bucket}/${outputKey}`;
-};
-
-const createCertificateRecord = async (
-  certificateId,
-  quizId,
-  userId,
-  submissionId,
-  metaData = {}
-) => {
-  const certificateItem = {
-    id: certificateId,
-    subjectId: quizId,
-    userId,
-    submissionId,
-    issueDate: getTimestamp(),
-    status: QUERY_STATUS.ACTIVE,
-    metaData,
-  };
-
-  await createItemInDynamoDB(
-    certificateItem,
-    TABLE_NAME.CERTIFICATES,
-    { "#id": "id" },
-    "attribute_not_exists(#id)"
-  );
 };

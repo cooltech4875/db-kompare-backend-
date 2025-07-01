@@ -11,6 +11,7 @@ custom:
   usersTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.USERS_TABLE}
   quizProgressTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.QUIZ_PROGRESS_TABLE}
   UserAchievementsTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.USER_ACHIEVEMENTS_TABLE}
+  certificatesTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.CERTIFICATES_TABLE}
 
   serverless-offline:
     httpPort: 4000
@@ -32,6 +33,7 @@ provider:
     USERS_TABLE: db-kompare-users-${self:provider.stage}
     QUIZ_PROGRESS_TABLE: db-kompare-user-quiz-progress-${self:provider.stage}
     USER_ACHIEVEMENTS_TABLE: db-kompare-user-achievements-${self:provider.stage}
+    CERTIFICATES_TABLE: db-kompare-certificates-${self:provider.stage}
 
 
   apiGateway:
@@ -59,6 +61,8 @@ provider:
             - ${self:custom.quizProgressTableArn}/index/* # Permission for quiz progress table indexes
             - ${self:custom.UserAchievementsTableArn} # Permission for user achievements table
             - ${self:custom.UserAchievementsTableArn}/index/* # Permission for user achievements table indexes
+            - ${self:custom.certificatesTableArn} # Permission for certificates table
+            - ${self:custom.certificatesTableArn}/index/* # Permission for certificates table indexes
 
 functions:
   createComment:

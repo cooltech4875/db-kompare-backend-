@@ -46,8 +46,8 @@ async function createPaymentIntent({
     currency: currency,
     customer: customerId,
     payment_method: paymentMethodId,
-    off_session: true,
-    confirm: true,
+    // off_session: true,
+    // confirm: true,
     metadata
   });
 }

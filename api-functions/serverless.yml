@@ -444,15 +444,15 @@ functions:
           cors: true
           private: true
 
-  addMetrices:
-    handler: functions/metrices/addMetrices.handler
-    timeout: 300
-    events:
-      - http:
-          path: /add-metrices
-          method: post
-          cors: true
-          private: true
+  # addMetrices:
+  #   handler: functions/metrices/addMetrices.handler
+  #   timeout: 300
+  #   events:
+  #     - http:
+  #         path: /add-metrices
+  #         method: post
+  #         cors: true
+  #         private: true
 
   getMetrices:
     handler: functions/metrices/getMetrices.handler
@@ -866,6 +866,16 @@ functions:
           method: get
           private: true
           cors: true
+
+  updateCertificate:
+    handler: functions/certificates/updateCertificate.handler
+    events:
+      - http:
+          path: certificate/{id}
+          method: put
+          private: true
+          cors: true
+
 
   ## --------- TAGS functions---------
   createTag:

@@ -60,6 +60,7 @@ export const handler = async (event, context, callback) => {
       email,
       name,
       role,
+      certificateCredits: 0,
       status: USER_STATUS.ACTIVE, // Set the user's status to ACTIVE
       loggedAt, // Store timestamp
     };

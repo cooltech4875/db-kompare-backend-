@@ -1,5 +1,6 @@
 import {
   getItem,
+  getTimestamp,
   sendResponse,
   updateItemInDynamoDB,
 } from "../../helpers/helpers.js";
@@ -29,34 +30,34 @@ export const handler = async (event) => {
     // 2. Ensure Stripe Customer
     let stripeCustomerId = user.stripeCustomerId;
 
-    if (!stripeCustomerId) {
-      // Create Stripe Customer
-      const customer = await createCustomer({
-        email: user.email,
-        name: user.name,
-        metadata: { userId },
-      });
+    // if (!stripeCustomerId) {
+    //   // Create Stripe Customer
+    //   const customer = await createCustomer({
+    //     email: user.email,
+    //     name: user.name,
+    //     metadata: { userId },
+    //   });
 
-      console.log("Created Stripe Customer:", customer);
-      stripeCustomerId = customer.id;
-      // Persist stripeCustomerId to DynamoDB
-      await updateItemInDynamoDB({
-        table: TABLE_NAME.USERS,
-        Key: { id: userId },
-        UpdateExpression: "SET stripeCustomerId = :scid, updatedAt = :u",
-        ExpressionAttributeValues: {
-          ":scid": stripeCustomerId,
-          ":u": new Date().toISOString(),
-        },
-      });
-    }
+    //   console.log("Created Stripe Customer:", customer);
+    //   stripeCustomerId = customer.id;
+    //   // Persist stripeCustomerId to DynamoDB
+    //   await updateItemInDynamoDB({
+    //     table: TABLE_NAME.USERS,
+    //     Key: { id: userId },
+    //     UpdateExpression: "SET stripeCustomerId = :scid, updatedAt = :u",
+    //     ExpressionAttributeValues: {
+    //       ":scid": stripeCustomerId,
+    //       ":u": new Date().toISOString(),
+    //     },
+    //   });
+    // }
 
     console.log("Using Stripe Customer ID:", stripeCustomerId);
     // 4. Create a PaymentIntent for a paid certificate
     const paymentIntent = await createPaymentIntent({
       amount: 1000, // €10.00 in cents
       currency: "eur",
-      customerId: stripeCustomerId,
+      // customerId: stripeCustomerId,
       paymentMethodId: paymentMethodId,
     });
 

@@ -6,10 +6,12 @@ import { fetchQuizWithQuestions } from "../common/quizzes.js";
 export const handler = async (event) => {
   // Extract quiz ID from path parameters
   const { id } = event.pathParameters || {};
-console.log("id", id);
+  console.log("id", id);
   try {
     // Get submission record
-    const submissionData = await getItem(TABLE_NAME.QUIZZES_SUBMISSIONS, { id });
+    const submissionData = await getItem(TABLE_NAME.QUIZZES_SUBMISSIONS, {
+      id,
+    });
     const submission = submissionData.Item;
     console.log("submission", submission);
     if (!submission) {
@@ -18,7 +20,11 @@ console.log("id", id);
 
     // Get the original quiz
     const quiz = await fetchQuizWithQuestions(submission.quizId);
-    
+    const certificateData = await getItem(TABLE_NAME.CERTIFICATES, {
+      id: submission.certificateId,
+    });
+    const certificate = certificateData.Item;
+
     console.log("quiz", quiz);
     if (!quiz) {
       return sendResponse(404, "Quiz not found", null);
@@ -32,6 +38,7 @@ console.log("id", id);
         difficulty: quiz.difficulty,
         questions: quiz.questions,
       },
+      eligibibleForCredits: certificate?.eligibibleForCredits || "FALSE",
     });
   } catch (error) {
     console.error("Error fetching submission:", error);
