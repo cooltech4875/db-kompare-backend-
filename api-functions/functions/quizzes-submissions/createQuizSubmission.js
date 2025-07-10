@@ -34,8 +34,8 @@ export const handler = async (event) => {
       answers
     );
 
-
-    const percentageScore = (correctCount / quiz.questions.length) * 100;
+    const desiredQuestions= +quiz?.desiredQuestions || quiz.questions.length; 
+    const percentageScore = (correctCount / desiredQuestions) * 100;
     const passed = percentageScore >= quiz.passingPerc;
 
 

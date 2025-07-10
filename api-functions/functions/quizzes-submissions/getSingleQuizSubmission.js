@@ -14,21 +14,29 @@ export const handler = async (event) => {
     });
     const submission = submissionData.Item;
     console.log("submission", submission);
+
     if (!submission) {
       return sendResponse(404, "Submission not found", null);
     }
 
     // Get the original quiz
     const quiz = await fetchQuizWithQuestions(submission.quizId);
-    const certificateData = await getItem(TABLE_NAME.CERTIFICATES, {
-      id: submission.certificateId,
-    });
-    const certificate = certificateData.Item;
-
     console.log("quiz", quiz);
+
     if (!quiz) {
       return sendResponse(404, "Quiz not found", null);
     }
+
+    let certificate = null;
+
+    if (submission?.certificateId) {
+      const certificateData = await getItem(TABLE_NAME.CERTIFICATES, {
+        id: submission.certificateId,
+      });
+      certificate = certificateData.Item;
+    }
+
+    console.log("certificate", certificate);
 
     return sendResponse(200, "Submission fetched successfully", {
       ...submission,
@@ -40,6 +48,7 @@ export const handler = async (event) => {
       },
       eligibibleForCredits: certificate?.eligibibleForCredits || "FALSE",
     });
+    
   } catch (error) {
     console.error("Error fetching submission:", error);
     return sendResponse(500, "Internal server error", error.message || error);
