@@ -267,3 +267,46 @@ export const fetchItemsByIds = async (table, ids, keyName) => {
     return [];
   }
 };
+
+export const getNextBlogId = async (table) => {
+  const params = {
+    TableName: getTableName(table),
+    Key: { id: "BLOG_COUNTER" },
+    UpdateExpression: "SET #count = if_not_exists(#count, :start) + :incr",
+    ExpressionAttributeNames: {
+      "#count": "count"
+    },
+    ExpressionAttributeValues: {
+      ":incr": 1,
+      ":start": 0
+    },
+    ReturnValues: "UPDATED_NEW"
+  };
+
+  try {
+    const result = await DynamoDBClient.update(params).promise();
+    const count = result.Attributes.count;
+    return `#${count.toString().padStart(2, '0')}`;
+  } catch (error) {
+    console.error("Error getting next blog ID:", error);
+    throw new Error("Failed to generate blog ID");
+  }
+};
+
+export const getCurrentBlogCounter = async (table) => {
+  const params = {
+    TableName: getTableName(table),
+    Key: { id: "BLOG_COUNTER" }
+  };
+
+  try {
+    const result = await DynamoDBClient.get(params).promise();
+    if (result.Item && result.Item.count) {
+      return result.Item.count;
+    }
+    return 0;
+  } catch (error) {
+    console.error("Error getting current blog counter:", error);
+    return 0;
+  }
+};

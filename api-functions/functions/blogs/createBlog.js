@@ -1,5 +1,4 @@
-import { createItemInDynamoDB } from "../../helpers/dynamodb.js";
-import { v4 as uuidv4 } from "uuid";
+import { createItemInDynamoDB, getNextBlogId } from "../../helpers/dynamodb.js";
 import { TABLE_NAME } from "../../helpers/constants.js";
 import { getTimestamp, sendResponse } from "../../helpers/helpers.js";
 
@@ -19,8 +18,12 @@ export const handler = async (event) => {
       return sendResponse(400, "Missing or invalid fields", false);
     }
 
+    // Generate the next blog ID automatically
+    const blogId = await getNextBlogId(TABLE_NAME.BLOG_COUNTER);
+
     const blogItem = {
       id,
+      blogId: blogId,
       createdBy,
       createdAt: getTimestamp(),
       title,
