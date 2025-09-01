@@ -274,19 +274,19 @@ export const getNextBlogId = async (table) => {
     Key: { id: "BLOG_COUNTER" },
     UpdateExpression: "SET #count = if_not_exists(#count, :start) + :incr",
     ExpressionAttributeNames: {
-      "#count": "count"
+      "#count": "count",
     },
     ExpressionAttributeValues: {
       ":incr": 1,
-      ":start": 0
+      ":start": 0,
     },
-    ReturnValues: "UPDATED_NEW"
+    ReturnValues: "UPDATED_NEW",
   };
 
   try {
     const result = await DynamoDBClient.update(params).promise();
     const count = result.Attributes.count;
-    return `#${count.toString().padStart(2, '0')}`;
+    return count;
   } catch (error) {
     console.error("Error getting next blog ID:", error);
     throw new Error("Failed to generate blog ID");
@@ -296,7 +296,7 @@ export const getNextBlogId = async (table) => {
 export const getCurrentBlogCounter = async (table) => {
   const params = {
     TableName: getTableName(table),
-    Key: { id: "BLOG_COUNTER" }
+    Key: { id: "BLOG_COUNTER" },
   };
 
   try {
