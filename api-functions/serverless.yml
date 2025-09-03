@@ -292,7 +292,7 @@ functions:
       - http:
           path: /get-rankings
           method: post
-          # private: true
+          private: true
           cors: true
   getDbToolRanking:
     handler: functions/rankings/getDbToolRanking.handler
