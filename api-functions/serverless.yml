@@ -184,11 +184,12 @@ provider:
         - Effect: Allow
           Action:
             - cognito-idp:*
-            - ses:SendEmail
           Resource:
             - arn:aws:cognito-idp:eu-west-1:253490764757:userpool/eu-west-1_NGNKtdSEL
-            - arn:aws:ses:${self:provider.region}:${aws:accountId}:identity/${self:provider.environment.SOURCE_EMAIL}
-            - arn:aws:ses:${self:provider.region}:${aws:accountId}:identity/${self:provider.environment.ADMIN_EMAIL}
+        - Effect: Allow
+          Action:
+            - ses:SendEmail
+          Resource: "*"
 functions:
   makeProfiling:
     handler: functions/profiling/makeProfiling.handler
@@ -285,6 +286,14 @@ functions:
           cors: true
     environment:
       COGNITO_USER_POOL_ID: !Ref DbKompare
+
+  deleteAccountRequest:
+    handler: functions/users/deleteAccountRequest.handler
+    events:
+      - http:
+          path: /delete-account-request
+          method: post
+          cors: true
 
   getRankings:
     handler: functions/rankings/getRankings.handler
