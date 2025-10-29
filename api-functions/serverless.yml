@@ -15,6 +15,7 @@ custom:
   savedBlogsTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.SAVED_BLOGS_TABLE}
   trackingResourcesTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.TRACKING_RESOURCES_TABLE}
   blogCounterTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.BLOG_COUNTER_TABLE}
+  groupCounterTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.GROUP_COUNTER_TABLE}
   dbToolCategoriesTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.DB_TOOL_CATEGORIES_TABLE}
   dbToolsTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.DB_TOOLS_TABLE}
   dbToolsMetricesTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.DB_TOOLS_METRICES_TABLE}
@@ -80,6 +81,7 @@ provider:
     USERS_TABLE: db-kompare-users-${self:provider.stage}
     TRACKING_RESOURCES_TABLE: db-kompare-tracking-resources-${self:provider.stage}
     BLOG_COUNTER_TABLE: db-kompare-blog-counter-${self:provider.stage}
+    GROUP_COUNTER_TABLE: db-kompare-group-counter-${self:provider.stage}
     DB_TOOL_CATEGORIES_TABLE: db-kompare-dbtools-categories-${self:provider.stage}
     DB_TOOLS_TABLE: db-kompare-dbtools-${self:provider.stage}
     DB_TOOLS_METRICES_TABLE: db-kompare-dbtools-metrices-${self:provider.stage}
@@ -184,6 +186,7 @@ provider:
             - ${self:custom.blogsTableArn} # Permission for blogs table
             - ${self:custom.databaseRankingTableArn} # Permission for database rankings table
             - ${self:custom.blogCounterTableArn} # Permission for blog counter table
+            - ${self:custom.groupCounterTableArn} # Permission for group counter table
             - ${self:custom.dbToolCategoriesTableArn} # Permission for db tools categories table
             - ${self:custom.dbToolsMetricesTableArn} # Permission for db tools metrices table
             - ${self:custom.dbToolsTableArn} # Permission for db tools table
