@@ -353,3 +353,46 @@ export const getCurrentBlogCounter = async (table) => {
     return 0;
   }
 };
+
+export const getNextGroupId = async (table) => {
+  const params = {
+    TableName: getTableName(table),
+    Key: { id: "GROUP_COUNTER" },
+    UpdateExpression: "SET #count = if_not_exists(#count, :start) + :incr",
+    ExpressionAttributeNames: {
+      "#count": "count",
+    },
+    ExpressionAttributeValues: {
+      ":incr": 1,
+      ":start": 0,
+    },
+    ReturnValues: "UPDATED_NEW",
+  };
+
+  try {
+    const result = await DynamoDBClient.update(params).promise();
+    const count = result.Attributes.count;
+    return count;
+  } catch (error) {
+    console.error("Error getting next group ID:", error);
+    throw new Error("Failed to generate group ID");
+  }
+};
+
+export const getCurrentGroupCounter = async (table) => {
+  const params = {
+    TableName: getTableName(table),
+    Key: { id: "GROUP_COUNTER" },
+  };
+
+  try {
+    const result = await DynamoDBClient.get(params).promise();
+    if (result.Item && result.Item.count) {
+      return result.Item.count;
+    }
+    return 0;
+  } catch (error) {
+    console.error("Error getting current group counter:", error);
+    return 0;
+  }
+};

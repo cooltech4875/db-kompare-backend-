@@ -27,6 +27,7 @@ export const TABLE_NAME = {
   CATEGORIES: process.env.CATEGORIES_TABLE,
   USER_ACHIEVEMENTS: process.env.USER_ACHIEVEMENTS_TABLE,
   BLOG_COUNTER: process.env.BLOG_COUNTER_TABLE,
+  GROUP_COUNTER: process.env.GROUP_COUNTER_TABLE,
 };
 
 export const STATUS_CODE = {

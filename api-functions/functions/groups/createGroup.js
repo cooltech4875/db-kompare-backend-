@@ -1,6 +1,6 @@
 // src/functions/groups/createGroup.js
 
-import { createItemInDynamoDB } from "../../helpers/dynamodb.js";
+import { createItemInDynamoDB, getNextGroupId } from "../../helpers/dynamodb.js";
 import { v4 as uuidv4 } from "uuid";
 import { TABLE_NAME, USER_ROLE } from "../../helpers/constants.js";
 import {
@@ -23,8 +23,12 @@ export const handler = async (event) => {
       return sendResponse(400, '"quizIds" must be an array', null);
     }
 
+    // Generate the next group ID automatically
+    const groupId = await getNextGroupId(TABLE_NAME.GROUP_COUNTER);
+
     const groupItem = {
       id: uuidv4(),
+      groupId: groupId,
       createdAt: getTimestamp(),
       name: name.trim(),
       quizIds: Array.isArray(quizIds) ? quizIds : [],
