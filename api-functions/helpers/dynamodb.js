@@ -250,6 +250,49 @@ export const fetchAllItemByDynamodbIndex = async ({
   return CountOnly ? totalCount : allItems; // Return totalCount or allItems based on CountOnly
 };
 
+export const fetchAllItemsByScan = async ({
+  TableName,
+  FilterExpression = null,
+  ExpressionAttributeNames = null,
+  ExpressionAttributeValues = null,
+}) => {
+  let lastEvaluatedKey;
+  const allItems = [];
+
+  try {
+    do {
+      const params = {
+        TableName,
+      };
+
+      if (lastEvaluatedKey) {
+        params.ExclusiveStartKey = lastEvaluatedKey;
+      }
+
+      if (FilterExpression) {
+        params.FilterExpression = FilterExpression;
+      }
+
+      if (ExpressionAttributeNames) {
+        params.ExpressionAttributeNames = ExpressionAttributeNames;
+      }
+
+      if (ExpressionAttributeValues) {
+        params.ExpressionAttributeValues = ExpressionAttributeValues;
+      }
+
+      const response = await DynamoDBClient.scan(params).promise();
+      allItems.push(...(response.Items || []));
+      lastEvaluatedKey = response.LastEvaluatedKey;
+    } while (lastEvaluatedKey);
+  } catch (error) {
+    console.error("Failed to scan items:", error);
+    throw new Error("Error scanning items from DynamoDB");
+  }
+
+  return allItems;
+};
+
 export const fetchItemsByIds = async (table, ids, keyName) => {
   const keys = ids.map((id) => ({ [keyName]: id })); // Map IDs to expected key structure
   const params = {

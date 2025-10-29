@@ -30,6 +30,7 @@ custom:
   quizzesTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.QUIZZES_TABLE}
   quizzesQuestionsTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.QUIZZES_QUESTIONS_TABLE}
   quizzesSubmissionsTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.QUIZZES_SUBMISSIONS_TABLE}
+  groupsTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.GROUPS_TABLE}
   certificatesTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.CERTIFICATES_TABLE}
   categoriesTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.CATEGORIES_TABLE}
   userAchievementsTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.USER_ACHIEVEMENTS_TABLE}
@@ -52,9 +53,16 @@ custom:
   serverless-offline:
     httpPort: 4000
 
+  splitStacks:
+    perFunction: false
+    perType: true
+    perGroupFunction: false
+    stackConcurrency: 10
+
 plugins:
   - serverless-dotenv-plugin
   - serverless-offline
+  - serverless-plugin-split-stacks
 
 provider:
   name: aws
@@ -80,6 +88,7 @@ provider:
     QUIZZES_TABLE: db-kompare-quizzes-${self:provider.stage}
     QUIZZES_QUESTIONS_TABLE: db-kompare-quizzes-questions-${self:provider.stage}
     QUIZZES_SUBMISSIONS_TABLE: db-kompare-quiz-submissions-${self:provider.stage}
+    GROUPS_TABLE: db-kompare-groups-${self:provider.stage}
     TAGS_TABLE: db-kompare-tags-${self:provider.stage}
     CATEGORIES_TABLE: db-kompare-categories-${self:provider.stage}
     CERTIFICATES_TABLE: db-kompare-certificates-${self:provider.stage}
@@ -143,6 +152,8 @@ provider:
             - ${self:custom.quizzesQuestionsTableArn}/index/*
             - ${self:custom.quizzesSubmissionsTableArn}
             - ${self:custom.quizzesSubmissionsTableArn}/index/*
+            - ${self:custom.groupsTableArn}
+            - ${self:custom.groupsTableArn}/index/*
             - ${self:custom.questionsTableArn}
             - ${self:custom.databaseAggregationTableArn}
             - ${self:custom.dbToolsAggregationTableArn}
@@ -811,6 +822,44 @@ functions:
     events:
       - http:
           path: quiz-question/{id}
+          method: delete
+          private: true
+          cors: true
+
+  ## --------- Groups functions---------
+
+  createGroup:
+    handler: functions/groups/createGroup.handler
+    events:
+      - http:
+          path: /create-group
+          method: post
+          private: true
+          cors: true
+
+  getGroups:
+    handler: functions/groups/getGroups.handler
+    events:
+      - http:
+          path: /get-groups
+          method: get
+          private: true
+          cors: true
+
+  updateGroup:
+    handler: functions/groups/updateGroup.handler
+    events:
+      - http:
+          path: group/{id}
+          method: put
+          private: true
+          cors: true
+
+  deleteGroup:
+    handler: functions/groups/deleteGroup.handler
+    events:
+      - http:
+          path: group/{id}
           method: delete
           private: true
           cors: true
