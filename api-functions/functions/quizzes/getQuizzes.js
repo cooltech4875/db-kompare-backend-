@@ -24,6 +24,7 @@ export const handler = async (event) => {
     const status = params.status || QUERY_STATUS.ACTIVE;
     const userId = params.userId;
     const groupId = params.groupId || null;
+    const difficulty = params.difficulty || null; // optional filter
 
     // 2. Fetch all quizzes matching the status
     let quizzes = await fetchAllItemByDynamodbIndex({
@@ -34,7 +35,12 @@ export const handler = async (event) => {
       ExpressionAttributeValues: { ":status": status },
     });
 
-    // 2a. If groupId provided, filter quizzes by the group's quizIds
+    // 2a. Optional difficulty filter
+    if (difficulty) {
+      quizzes = quizzes.filter((q) => q.difficulty === difficulty);
+    }
+
+    // 2b. If groupId provided, filter quizzes by the group's quizIds
     if (groupId) {
       const groups = await fetchAllItemsByScan({ TableName: TABLE_NAME.GROUPS });
       const selectedGroup = groups.find((g) => g.id === groupId);
