@@ -1,6 +1,6 @@
 // src/functions/getQuizzes.js
 import { sendResponse } from "../../helpers/helpers.js";
-import { fetchAllItemByDynamodbIndex } from "../../helpers/dynamodb.js";
+import { fetchAllItemByDynamodbIndex, fetchAllItemsByScan } from "../../helpers/dynamodb.js";
 import { fetchUserById } from "../common/fetchUserById.js";
 import { TABLE_NAME, QUERY_STATUS } from "../../helpers/constants.js";
 
@@ -23,15 +23,29 @@ export const handler = async (event) => {
     const params = event.queryStringParameters || {};
     const status = params.status || QUERY_STATUS.ACTIVE;
     const userId = params.userId;
+    const groupId = params.groupId || null;
 
     // 2. Fetch all quizzes matching the status
-    const quizzes = await fetchAllItemByDynamodbIndex({
+    let quizzes = await fetchAllItemByDynamodbIndex({
       TableName: TABLE_NAME.QUIZZES,
       IndexName: "byStatus",
       KeyConditionExpression: "#status = :status",
       ExpressionAttributeNames: { "#status": "status" },
       ExpressionAttributeValues: { ":status": status },
     });
+
+    // 2a. If groupId provided, filter quizzes by the group's quizIds
+    if (groupId) {
+      const groups = await fetchAllItemsByScan({ TableName: TABLE_NAME.GROUPS });
+      const selectedGroup = groups.find((g) => g.id === groupId);
+
+      if (!selectedGroup) {
+        return sendResponse(200, "No quizzes for this group", []);
+      }
+
+      const allowedQuizIds = new Set(selectedGroup.quizIds || []);
+      quizzes = quizzes.filter((q) => allowedQuizIds.has(q.id));
+    }
 
     // 3. Initialize each quiz's 'taken' flag and capture default participants
     let quizzesWithTaken = quizzes.map((quiz) => ({
