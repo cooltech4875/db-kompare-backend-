@@ -30,7 +30,7 @@ export const handler = async (event) => {
       passedSubmissions
     );
 
-    await updateGroupCertificateInfo(groupId, userId, certificateUrl, group);
+    await updateGroupCertificateInfo(groupId, userId, certificateUrl, submissionId, group);
 
     return sendResponse(200, "Group certificate generated successfully", {
       id: certificateId,
@@ -140,27 +140,36 @@ const createAndSaveCertificate = async (group, user, passedQuizIds, passedSubmis
   return { certificateId, certificateUrl, averagePercentage, submissionId };
 };
 
-const updateGroupCertificateInfo = async (groupId, userId, certificateUrl, group) => {
-  const updateExpressions = [];
-  const expressionAttributeNames = { "#userId": userId };
-  const expressionAttributeValues = { ":certificateUrl": certificateUrl };
-
-  // Always add userId to array if not present
-  if (!group.certificateTakenBy?.includes(userId)) {
-    updateExpressions.push("certificateTakenBy = list_append(if_not_exists(certificateTakenBy, :empty_list), :userId_list)");
-    expressionAttributeValues[":empty_list"] = [];
-    expressionAttributeValues[":userId_list"] = [userId];
-  }
-
-  // Always update certificate URL for this user (overwrite if exists)
-  updateExpressions.push("certificateUrls.#userId = :certificateUrl");
-
+const updateGroupCertificateInfo = async (groupId, userId, certificateUrl, submissionId, group) => {
+  // Update certificate URL for this user - merge with existing certificateUrls
+  const existingUrls = group.certificateUrls || {};
+  const updatedUrls = {
+    ...existingUrls,
+    [userId]: certificateUrl,
+  };
+  
+  // Update certificate submission IDs - merge with existing
+  const existingSubmissionIds = group.certificateSubmissionIds || {};
+  const updatedSubmissionIds = {
+    ...existingSubmissionIds,
+    [userId]: submissionId,
+  };
+  
+  // Update certificateTakenBy array - add userId if not present
+  const existingTakenBy = group.certificateTakenBy || [];
+  const updatedTakenBy = existingTakenBy.includes(userId) 
+    ? existingTakenBy 
+    : [...existingTakenBy, userId];
+  
   await updateItemInDynamoDB({
     table: TABLE_NAME.GROUPS,
     Key: { id: groupId },
-    UpdateExpression: `SET ${updateExpressions.join(", ")}`,
-    ExpressionAttributeNames: expressionAttributeNames,
-    ExpressionAttributeValues: expressionAttributeValues,
+    UpdateExpression: "SET certificateUrls = :certificateUrls, certificateSubmissionIds = :certificateSubmissionIds, certificateTakenBy = :certificateTakenBy",
+    ExpressionAttributeValues: {
+      ":certificateUrls": updatedUrls,
+      ":certificateSubmissionIds": updatedSubmissionIds,
+      ":certificateTakenBy": updatedTakenBy,
+    },
     ReturnValues: "NONE",
   });
 };
