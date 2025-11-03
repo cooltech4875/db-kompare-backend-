@@ -68,7 +68,13 @@ export const handler = async (event) => {
           const certificateTakenBy = Array.isArray(group.certificateTakenBy)
             ? group.certificateTakenBy
             : [];
+          const certificateUrls = group.certificateUrls || {};
           groupResponse.hasCertificate = certificateTakenBy.includes(userId);
+          
+          // If certificate exists, include the certificate URL
+          if (groupResponse.hasCertificate && certificateUrls[userId]) {
+            groupResponse.certificateUrl = certificateUrls[userId];
+          }
         }
 
         return groupResponse;

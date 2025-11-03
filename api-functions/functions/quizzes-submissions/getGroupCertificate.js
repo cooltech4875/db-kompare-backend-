@@ -1,6 +1,6 @@
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import ShortUniqueId from "short-unique-id";
-import { getItem, fetchAllItemByDynamodbIndex, updateItemInDynamoDB } from "../../helpers/dynamodb.js";
+import { getItem, fetchAllItemByDynamodbIndex, updateItemInDynamoDB, createItemInDynamoDB } from "../../helpers/dynamodb.js";
 import { fetchBufferFromS3, uploadBufferToS3 } from "../../helpers/s3.js";
 import {
   TABLE_NAME,
@@ -13,208 +13,151 @@ const uid = new ShortUniqueId({ length: 12 });
 
 export const handler = async (event) => {
   try {
-    // Parse and validate input
     const { groupId, userId } = event.queryStringParameters || {};
     
     if (!groupId || !userId) {
-      return sendResponse(
-        400,
-        "Missing required parameters: groupId and userId",
-        null
-      );
+      return sendResponse(400, "Missing required parameters: groupId and userId", null);
     }
 
-    // Fetch group and user
-    const [groupResult, userResult] = await Promise.all([
-      getItem(TABLE_NAME.GROUPS, { id: groupId }),
-      getItem(TABLE_NAME.USERS, { id: userId }),
-    ]);
-
-    if (!groupResult?.Item) {
-      return sendResponse(404, "Group not found", null);
-    }
-
-    if (!userResult?.Item) {
-      return sendResponse(404, "User not found", null);
-    }
-
-    const group = groupResult.Item;
-    const user = userResult.Item;
-
-    // Check if group has quizzes
-    const groupQuizIds = group.quizIds || [];
-    if (groupQuizIds.length === 0) {
-      return sendResponse(400, "Group has no quizzes", null);
-    }
-
-    // Fetch all quiz submissions for this user
-    const submissions = await fetchAllItemByDynamodbIndex({
-      TableName: TABLE_NAME.QUIZZES_SUBMISSIONS,
-      IndexName: "byUser",
-      KeyConditionExpression: "#userId = :userId",
-      ExpressionAttributeNames: { "#userId": "userId" },
-      ExpressionAttributeValues: { ":userId": userId },
-    });
-
-    // Filter to only passed submissions for quizzes in this group
-    const passedGroupSubmissions = submissions.filter(
-      (submission) =>
-        submission.status === "PASSED" &&
-        groupQuizIds.includes(submission.quizId)
+    const [group, user] = await validateAndFetch(groupId, userId);
+    const { passedQuizIds, passedSubmissions } = await validateUserEligibility(userId, group.quizIds);
+    
+    const { certificateId, certificateUrl, averagePercentage } = await createAndSaveCertificate(
+      group,
+      user,
+      passedQuizIds,
+      passedSubmissions
     );
 
-    // Get unique passed quiz IDs
-    const passedQuizIds = [
-      ...new Set(passedGroupSubmissions.map((s) => s.quizId)),
-    ];
-
-    // Check if user has passed all quizzes in the group
-    if (passedQuizIds.length < groupQuizIds.length) {
-      const missingCount = groupQuizIds.length - passedQuizIds.length;
-      return sendResponse(
-        403,
-        `You must pass all quizzes in this group. ${missingCount} quiz(es) remaining.`,
-        {
-          totalQuizzes: groupQuizIds.length,
-          passedQuizzes: passedQuizIds.length,
-          remainingQuizzes: missingCount,
-        }
-      );
-    }
-
-    // Check if certificate already exists for this user and group
-    const existingCertificates = await fetchAllItemByDynamodbIndex({
-      TableName: TABLE_NAME.CERTIFICATES,
-      IndexName: "byUser",
-      KeyConditionExpression: "#userId = :userId",
-      ExpressionAttributeNames: { "#userId": "userId" },
-      ExpressionAttributeValues: { ":userId": userId },
-    });
-
-    const existingGroupCertificate = existingCertificates.find(
-      (cert) => cert.subjectId === groupId && cert.status === QUERY_STATUS.ACTIVE
-    );
-
-    // Check if user is already in certificateTakenBy array (for existing certificates)
-    const certificateTakenBy = group.certificateTakenBy || [];
-    if (!certificateTakenBy.includes(userId) && existingGroupCertificate) {
-      // Update group to add userId if certificate exists but not in array
-      await updateItemInDynamoDB({
-        table: TABLE_NAME.GROUPS,
-        Key: { id: groupId },
-        UpdateExpression: "SET certificateTakenBy = list_append(if_not_exists(certificateTakenBy, :empty_list), :userId_list)",
-        ExpressionAttributeValues: {
-          ":empty_list": [],
-          ":userId_list": [userId],
-        },
-        ReturnValues: "NONE",
-      });
-    }
-
-    if (existingGroupCertificate) {
-      // Return existing certificate
-      const certificateUrl = `s3://${process.env.BUCKET_NAME}/CERTIFICATES/${existingGroupCertificate.id}-${userId}-${existingGroupCertificate.submissionId || 'group'}.pdf`;
-      
-      return sendResponse(200, "Group certificate retrieved successfully", {
-        certificateId: existingGroupCertificate.id,
-        certificateUrl,
-        groupName: group.name,
-        issuedDate: existingGroupCertificate.issueDate,
-        alreadyExists: true,
-      });
-    }
-
-    // Generate new certificate
-    const certificateId = uid.rnd().toUpperCase();
-    const formattedDateTime = moment()
-      .utc()
-      .format("Do MMMM YYYY HH:mm:ss [UTC]"); 
-
-    // Calculate average percentage score from all passed submissions
-    const averagePercentage = Math.round(
-      passedGroupSubmissions.reduce(
-        (sum, submission) => sum + (submission.percentageScore || 0),
-        0
-      ) / passedGroupSubmissions.length
-    );
-
-    // if user has less than 25 credits, set eligibibleForCredits to FALSE
-    // if user has more than 25 credits, set eligibibleForCredits to TRUE because user has to pay 10 euro to get the certificate
-    const isEligibleForCredits =
-      user?.certificateCredits > 25 ? "TRUE" : "FALSE";
-
-    // Generate certificate with custom completion text
-    const certificateUrl = await generateCertificate({
-      bucket: process.env.BUCKET_NAME,
-      templateKey: "COMMON/Certificate.pdf",
-      outputKey: `CERTIFICATES/${certificateId}-${userId}-group.pdf`,
-      fields: {
-        name: user?.name || "User",
-        dateTime: formattedDateTime,
-        groupName: group?.name || "Group",
-        averagePercentage,
-        certificateId,
-        completionText: `For successfully completing all quizzes in the ${group.name} group on ${formattedDateTime}.`,
-      },
-    });
-
-    const metaData = {
-      averageScore: averagePercentage,
-      groupName: group?.name,
-      totalQuizzes: groupQuizIds.length,
-      passedQuizzes: passedQuizIds.length,
-    };
-
-    // Create certificate record
-    const certificateItem = {
-      id: certificateId,
-      subjectId: groupId, // Group ID instead of quiz ID
-      userId,
-      submissionId: null, // No single submission for group certificate
-      issueDate: getTimestamp(),
-      status: QUERY_STATUS.ACTIVE,
-      metaData,
-      eligibibleForCredits: isEligibleForCredits,
-    };
-
-    // Save certificate to database
-    const { createItemInDynamoDB } = await import("../../helpers/dynamodb.js");
-    await createItemInDynamoDB(
-      certificateItem,
-      TABLE_NAME.CERTIFICATES,
-      { "#id": "id" },
-      "attribute_not_exists(#id)",
-      false
-    );
-
-    // Update group to add userId to certificateTakenBy array
-    const existingCertificateTakenBy = group.certificateTakenBy || [];
-    if (!existingCertificateTakenBy.includes(userId)) {
-      await updateItemInDynamoDB({
-        table: TABLE_NAME.GROUPS,
-        Key: { id: groupId },
-        UpdateExpression: "SET certificateTakenBy = list_append(if_not_exists(certificateTakenBy, :empty_list), :userId_list)",
-        ExpressionAttributeValues: {
-          ":empty_list": [],
-          ":userId_list": [userId],
-        },
-        ReturnValues: "NONE",
-      });
-    }
+    await updateGroupCertificateInfo(groupId, userId, certificateUrl, group);
 
     return sendResponse(200, "Group certificate generated successfully", {
       certificateId,
       certificateUrl,
       groupName: group.name,
       averagePercentage,
-      issuedDate: certificateItem.issueDate,
-      eligibibleForCredits: isEligibleForCredits,
+      issuedDate: getTimestamp(),
+      eligibibleForCredits: user?.certificateCredits > 25 ? "TRUE" : "FALSE",
     });
   } catch (error) {
     console.error("Error generating group certificate:", error);
     const statusCode = error.message.includes("not found") ? 404 : 400;
     return sendResponse(statusCode, error.message, null);
   }
+};
+
+// ======================
+// Helper Functions
+// ======================
+
+const validateAndFetch = async (groupId, userId) => {
+  const [groupResult, userResult] = await Promise.all([
+    getItem(TABLE_NAME.GROUPS, { id: groupId }),
+    getItem(TABLE_NAME.USERS, { id: userId }),
+  ]);
+
+  if (!groupResult?.Item) throw new Error("Group not found");
+  if (!userResult?.Item) throw new Error("User not found");
+  if (!groupResult.Item.quizIds?.length) throw new Error("Group has no quizzes");
+
+  return [groupResult.Item, userResult.Item];
+};
+
+const validateUserEligibility = async (userId, groupQuizIds) => {
+  const submissions = await fetchAllItemByDynamodbIndex({
+    TableName: TABLE_NAME.QUIZZES_SUBMISSIONS,
+    IndexName: "byUser",
+    KeyConditionExpression: "#userId = :userId",
+    ExpressionAttributeNames: { "#userId": "userId" },
+    ExpressionAttributeValues: { ":userId": userId },
+  });
+
+  const passedSubmissions = submissions.filter(
+    (s) => s.status === "PASSED" && groupQuizIds.includes(s.quizId)
+  );
+
+  const passedQuizIds = [...new Set(passedSubmissions.map((s) => s.quizId))];
+
+  if (passedQuizIds.length < groupQuizIds.length) {
+    throw new Error(
+      `You must pass all quizzes in this group. ${groupQuizIds.length - passedQuizIds.length} quiz(es) remaining.`
+    );
+  }
+
+  return { passedQuizIds, passedSubmissions };
+};
+
+const createAndSaveCertificate = async (group, user, passedQuizIds, passedSubmissions) => {
+  const certificateId = uid.rnd().toUpperCase();
+  const formattedDateTime = moment().utc().format("Do MMMM YYYY HH:mm:ss [UTC]");
+
+  const averagePercentage = Math.round(
+    passedSubmissions.reduce((sum, s) => sum + (s.percentageScore || 0), 0) /
+      passedSubmissions.length
+  );
+
+  const certificateUrl = await generateCertificate({
+    bucket: process.env.BUCKET_NAME,
+    templateKey: "COMMON/Certificate.pdf",
+    outputKey: `CERTIFICATES/${certificateId}-${user.id}-group.pdf`,
+    fields: {
+      name: user?.name || "User",
+      dateTime: formattedDateTime,
+      groupName: group?.name || "Group",
+      averagePercentage,
+      certificateId,
+      completionText: `For successfully completing all quizzes in the ${group.name} group on ${formattedDateTime}.`,
+    },
+  });
+
+  await createItemInDynamoDB(
+    {
+      id: certificateId,
+      subjectId: group.id,
+      userId: user.id,
+      submissionId: null,
+      issueDate: getTimestamp(),
+      status: QUERY_STATUS.ACTIVE,
+      metaData: {
+        averageScore: averagePercentage,
+        groupName: group?.name,
+        totalQuizzes: group.quizIds.length,
+        passedQuizzes: passedQuizIds.length,
+      },
+      eligibibleForCredits: user?.certificateCredits > 25 ? "TRUE" : "FALSE",
+    },
+    TABLE_NAME.CERTIFICATES,
+    { "#id": "id" },
+    "attribute_not_exists(#id)",
+    false
+  );
+
+  return { certificateId, certificateUrl, averagePercentage };
+};
+
+const updateGroupCertificateInfo = async (groupId, userId, certificateUrl, group) => {
+  const updateExpressions = [];
+  const expressionAttributeNames = { "#userId": userId };
+  const expressionAttributeValues = { ":certificateUrl": certificateUrl };
+
+  // Always add userId to array if not present
+  if (!group.certificateTakenBy?.includes(userId)) {
+    updateExpressions.push("certificateTakenBy = list_append(if_not_exists(certificateTakenBy, :empty_list), :userId_list)");
+    expressionAttributeValues[":empty_list"] = [];
+    expressionAttributeValues[":userId_list"] = [userId];
+  }
+
+  // Always update certificate URL for this user (overwrite if exists)
+  updateExpressions.push("certificateUrls.#userId = :certificateUrl");
+
+  await updateItemInDynamoDB({
+    table: TABLE_NAME.GROUPS,
+    Key: { id: groupId },
+    UpdateExpression: `SET ${updateExpressions.join(", ")}`,
+    ExpressionAttributeNames: expressionAttributeNames,
+    ExpressionAttributeValues: expressionAttributeValues,
+    ReturnValues: "NONE",
+  });
 };
 
 // ======================
