@@ -17,11 +17,14 @@ export const handler = async (event) => {
       return sendResponse(404, "Certificate not found", null);
     }
 
-    // Fetch quiz details using subjectId
-    const quizResult = await getItem(TABLE_NAME.QUIZZES, { id: certificate?.subjectId });
-    const quiz = quizResult?.Item;
-    if (!quiz) {
-      return sendResponse(404, "Associated quiz not found", null);
+    // Fetch quiz details using subjectId only if subjectId exists
+    let quiz = null;
+    if (certificate?.subjectId) {
+      const quizResult = await getItem(TABLE_NAME.QUIZZES, { id: certificate?.subjectId });
+      quiz = quizResult?.Item;
+      if (!quiz) {
+        return sendResponse(404, "Associated quiz not found", null);
+      }
     }
 
     // Fetch user details using userId
@@ -32,9 +35,13 @@ export const handler = async (event) => {
     }
 
     // Return combined response
+    const responseMessage = certificate?.subjectId 
+      ? "Certificate, quiz, and user fetched successfully"
+      : "Certificate and user fetched successfully";
+    
     return sendResponse(
       200,
-      "Certificate, quiz, and user fetched successfully",
+      responseMessage,
       { certificate, quiz, user }
     );
 
