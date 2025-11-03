@@ -118,7 +118,7 @@ const createAndSaveCertificate = async (group, user, passedQuizIds, passedSubmis
   await createItemInDynamoDB(
     {
       id: certificateId,
-      subjectId: group.id,
+      subjectId: null,
       userId: user.id,
       submissionId,
       issueDate: getTimestamp(),
