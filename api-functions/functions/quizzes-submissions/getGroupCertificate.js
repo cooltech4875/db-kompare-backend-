@@ -115,22 +115,26 @@ const createAndSaveCertificate = async (group, user, passedQuizIds, passedSubmis
     },
   });
 
-  await createItemInDynamoDB(
-    {
-      id: certificateId,
-      subjectId: null,
-      userId: user.id,
-      submissionId,
-      issueDate: getTimestamp(),
-      status: QUERY_STATUS.ACTIVE,
-      metaData: {
-        averageScore: averagePercentage,
-        groupName: group?.name,
-        totalQuizzes: group.quizIds.length,
-        passedQuizzes: passedQuizIds.length,
-      },
-      eligibibleForCredits: user?.certificateCredits > 25 ? "TRUE" : "FALSE",
+  const certificateItem = {
+    id: certificateId,
+    userId: user.id,
+    submissionId,
+    issueDate: getTimestamp(),
+    status: QUERY_STATUS.ACTIVE,
+    metaData: {
+      averageScore: averagePercentage,
+      groupName: group?.name,
+      totalQuizzes: group.quizIds.length,
+      passedQuizzes: passedQuizIds.length,
     },
+    eligibibleForCredits: user?.certificateCredits > 25 ? "TRUE" : "FALSE",
+  };
+
+  // Only add subjectId if it exists (for quiz certificates, not group certificates)
+  // Don't add subjectId for group certificates to avoid index issues
+
+  await createItemInDynamoDB(
+    certificateItem,
     TABLE_NAME.CERTIFICATES,
     { "#id": "id" },
     "attribute_not_exists(#id)",
