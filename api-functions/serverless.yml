@@ -793,6 +793,15 @@ functions:
           private: true
           cors: true
 
+  getGroupCertificate:
+    handler: functions/quizzes-submissions/getGroupCertificate.handler
+    events:
+      - http:
+          path: /get-group-certificate
+          method: get
+          private: true
+          cors: true
+
   updateQuiz:
     handler: functions/quizzes/updateQuiz.handler
     events:

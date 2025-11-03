@@ -1,6 +1,9 @@
 // src/functions/getGroups.js
 import { sendResponse } from "../../helpers/helpers.js";
-import { fetchAllItemsByScan } from "../../helpers/dynamodb.js";
+import {
+  fetchAllItemsByScan,
+  fetchAllItemByDynamodbIndex,
+} from "../../helpers/dynamodb.js";
 import { TABLE_NAME } from "../../helpers/constants.js";
 
 /**
@@ -11,24 +14,68 @@ import { TABLE_NAME } from "../../helpers/constants.js";
  * - createdAt: creation timestamp
  * - name: group name
  * - quizIds: array of quiz IDs associated with the group
+ * - quizCount: number of quizzes in the group
+ * - passedQuizzesCount: (if userId provided) number of quizzes user has passed in this group
  */
 export const handler = async (event) => {
   try {
-    // 1. Fetch all groups
+    // 1. Get userId from query parameters (optional)
+    const { userId } = event.queryStringParameters || {};
+
+    // 2. Fetch all groups
     const groups = await fetchAllItemsByScan({
       TableName: TABLE_NAME.GROUPS,
     });
 
-    // 2. Add quizCount to each group (number of quizzes in the group)
-    // Safely handle empty groups array or null/undefined
+    // 3. If userId is provided, fetch user's quiz submissions
+    let userSubmissions = [];
+
+    if (userId) {
+      // Fetch all quiz submissions for this user
+      userSubmissions = await fetchAllItemByDynamodbIndex({
+        TableName: TABLE_NAME.QUIZZES_SUBMISSIONS,
+        IndexName: "byUser",
+        KeyConditionExpression: "#userId = :userId",
+        ExpressionAttributeNames: { "#userId": "userId" },
+        ExpressionAttributeValues: { ":userId": userId },
+      });
+    }
+
+    // 4. Add quizCount and passedQuizzesCount to each group
     const groupsWithCount = (Array.isArray(groups) ? groups : []).map(
-      (group) => ({
-        ...group,
-        quizCount: Array.isArray(group.quizIds) ? group.quizIds.length : 0,
-      })
+      (group) => {
+        const groupQuizIds = Array.isArray(group.quizIds) ? group.quizIds : [];
+        const groupResponse = {
+          ...group,
+          quizCount: groupQuizIds.length,
+        };
+
+        // If userId is provided, count passed quizzes and check certificate
+        if (userId && groupQuizIds.length > 0) {
+          // Filter passed submissions for quizzes in this group
+          const passedSubmissions = userSubmissions.filter(
+            (submission) =>
+              submission.status === "PASSED" &&
+              groupQuizIds.includes(submission.quizId)
+          );
+
+          // Get unique passed quiz IDs (handling multiple attempts)
+          const passedQuizIds = new Set(passedSubmissions.map((s) => s.quizId));
+
+          groupResponse.passedQuizzesCount = passedQuizIds.size;
+
+          // Check if user has taken certificate (check certificateTakenBy array)
+          const certificateTakenBy = Array.isArray(group.certificateTakenBy)
+            ? group.certificateTakenBy
+            : [];
+          groupResponse.hasCertificate = certificateTakenBy.includes(userId);
+        }
+
+        return groupResponse;
+      }
     );
 
-    // 3. Return the groups list with quiz counts
+    // 5. Return the groups list with quiz counts and passed quizzes count (if userId provided)
     return sendResponse(200, "Groups fetched successfully", groupsWithCount);
   } catch (error) {
     console.error("Error fetching groups:", error);
