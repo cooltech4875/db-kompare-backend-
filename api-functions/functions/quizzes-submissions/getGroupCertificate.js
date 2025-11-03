@@ -1,5 +1,6 @@
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import ShortUniqueId from "short-unique-id";
+import { v4 as uuidv4 } from "uuid";
 import { getItem, fetchAllItemByDynamodbIndex, updateItemInDynamoDB, createItemInDynamoDB } from "../../helpers/dynamodb.js";
 import { fetchBufferFromS3, uploadBufferToS3 } from "../../helpers/s3.js";
 import {
@@ -22,7 +23,7 @@ export const handler = async (event) => {
     const [group, user] = await validateAndFetch(groupId, userId);
     const { passedQuizIds, passedSubmissions } = await validateUserEligibility(userId, group.quizIds);
     
-    const { certificateId, certificateUrl, averagePercentage } = await createAndSaveCertificate(
+    const { certificateId, certificateUrl, averagePercentage, submissionId } = await createAndSaveCertificate(
       group,
       user,
       passedQuizIds,
@@ -34,6 +35,8 @@ export const handler = async (event) => {
     return sendResponse(200, "Group certificate generated successfully", {
       certificateId,
       certificateUrl,
+      submissionId,
+      userId,
       groupName: group.name,
       averagePercentage,
       issuedDate: getTimestamp(),
@@ -89,6 +92,7 @@ const validateUserEligibility = async (userId, groupQuizIds) => {
 
 const createAndSaveCertificate = async (group, user, passedQuizIds, passedSubmissions) => {
   const certificateId = uid.rnd().toUpperCase();
+  const submissionId = uuidv4(); // Generate unique submissionId for group certificate
   const formattedDateTime = moment().utc().format("Do MMMM YYYY HH:mm:ss [UTC]");
 
   const averagePercentage = Math.round(
@@ -99,7 +103,7 @@ const createAndSaveCertificate = async (group, user, passedQuizIds, passedSubmis
   const certificateUrl = await generateCertificate({
     bucket: process.env.BUCKET_NAME,
     templateKey: "COMMON/Certificate.pdf",
-    outputKey: `CERTIFICATES/${certificateId}-${user.id}-group.pdf`,
+    outputKey: `CERTIFICATES/${certificateId}-${user.id}-${submissionId}.pdf`,
     fields: {
       name: user?.name || "User",
       dateTime: formattedDateTime,
@@ -115,7 +119,7 @@ const createAndSaveCertificate = async (group, user, passedQuizIds, passedSubmis
       id: certificateId,
       subjectId: group.id,
       userId: user.id,
-      submissionId: null,
+      submissionId,
       issueDate: getTimestamp(),
       status: QUERY_STATUS.ACTIVE,
       metaData: {
@@ -132,7 +136,7 @@ const createAndSaveCertificate = async (group, user, passedQuizIds, passedSubmis
     false
   );
 
-  return { certificateId, certificateUrl, averagePercentage };
+  return { certificateId, certificateUrl, averagePercentage, submissionId };
 };
 
 const updateGroupCertificateInfo = async (groupId, userId, certificateUrl, group) => {
