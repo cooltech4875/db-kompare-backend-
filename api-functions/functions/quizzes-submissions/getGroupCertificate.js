@@ -33,6 +33,7 @@ export const handler = async (event) => {
     await updateGroupCertificateInfo(groupId, userId, certificateUrl, group);
 
     return sendResponse(200, "Group certificate generated successfully", {
+      id: certificateId,
       certificateId,
       certificateUrl,
       submissionId,
