@@ -57,8 +57,11 @@ custom:
   splitStacks:
     perFunction: false
     perType: true
-    perGroupFunction: false
+    perGroupFunction: true
+    nestedStackCount: 50
     stackConcurrency: 10
+    ignore:
+      - AWS::Cognito::*
 
 plugins:
   - serverless-dotenv-plugin
@@ -266,6 +269,15 @@ functions:
     events:
       - http:
           path: /get-user
+          method: get
+          private: true
+          cors: true
+
+  getLeaderboard:
+    handler: functions/users/getLeaderboard.handler
+    events:
+      - http:
+          path: /get-leaderboard
           method: get
           private: true
           cors: true

@@ -114,6 +114,26 @@ export const handler = async (event) => {
           ExpressionAttributeNames: { "#v": "value" },
           ExpressionAttributeValues: { ":val": newStreak, ":now": ts },
         });
+
+        // Award 10 XP for earning a streak point
+        const xpEventItem = {
+          userId,
+          sortKey: `EVENT#XP#${ts}`,
+          type: "XP",
+          ts,
+          delta: 10,
+          reason: "Streak point earned",
+        };
+        await createItemInDynamoDB(xpEventItem, TABLE_NAME.USER_ACHIEVEMENTS);
+
+        const xpCounterKey = { userId, sortKey: "COUNTER#XP" };
+        await updateItemInDynamoDB({
+          table: TABLE_NAME.USER_ACHIEVEMENTS,
+          Key: xpCounterKey,
+          UpdateExpression: "ADD #v :delta SET lastUpdate = :now",
+          ExpressionAttributeNames: { "#v": "value" },
+          ExpressionAttributeValues: { ":delta": 10, ":now": ts },
+        });
       }
 
       // Schedule reminder and break notifications (upsert every login)

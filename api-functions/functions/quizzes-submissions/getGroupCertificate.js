@@ -1,36 +1,56 @@
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import ShortUniqueId from "short-unique-id";
 import { v4 as uuidv4 } from "uuid";
-import { getItem, fetchAllItemByDynamodbIndex, updateItemInDynamoDB, createItemInDynamoDB } from "../../helpers/dynamodb.js";
-import { fetchBufferFromS3, uploadBufferToS3 } from "../../helpers/s3.js";
 import {
-  TABLE_NAME,
-  QUERY_STATUS,
-} from "../../helpers/constants.js";
+  getItem,
+  fetchAllItemByDynamodbIndex,
+  updateItemInDynamoDB,
+  createItemInDynamoDB,
+} from "../../helpers/dynamodb.js";
+import { fetchBufferFromS3, uploadBufferToS3 } from "../../helpers/s3.js";
+import { TABLE_NAME, QUERY_STATUS } from "../../helpers/constants.js";
 import { getTimestamp, sendResponse } from "../../helpers/helpers.js";
 import moment from "moment";
+import { awardXP } from "../../helpers/awardXP.js";
 
 const uid = new ShortUniqueId({ length: 12 });
 
 export const handler = async (event) => {
   try {
     const { groupId, userId } = event.queryStringParameters || {};
-    
+
     if (!groupId || !userId) {
-      return sendResponse(400, "Missing required parameters: groupId and userId", null);
+      return sendResponse(
+        400,
+        "Missing required parameters: groupId and userId",
+        null
+      );
     }
 
     const [group, user] = await validateAndFetch(groupId, userId);
-    const { passedQuizIds, passedSubmissions } = await validateUserEligibility(userId, group.quizIds);
-    
-    const { certificateId, certificateUrl, averagePercentage, submissionId } = await createAndSaveCertificate(
-      group,
-      user,
-      passedQuizIds,
-      passedSubmissions
+    const { passedQuizIds, passedSubmissions } = await validateUserEligibility(
+      userId,
+      group.quizIds
     );
 
-    await updateGroupCertificateInfo(groupId, userId, certificateUrl, submissionId, group);
+    const { certificateId, certificateUrl, averagePercentage, submissionId } =
+      await createAndSaveCertificate(
+        group,
+        user,
+        passedQuizIds,
+        passedSubmissions
+      );
+
+    await updateGroupCertificateInfo(
+      groupId,
+      userId,
+      certificateUrl,
+      submissionId,
+      group
+    );
+
+    // Award 100 XP for successful group certificate completion
+    await awardXP(userId, 100, "Group certificate completion");
 
     return sendResponse(200, "Group certificate generated successfully", {
       id: certificateId,
@@ -62,7 +82,8 @@ const validateAndFetch = async (groupId, userId) => {
 
   if (!groupResult?.Item) throw new Error("Group not found");
   if (!userResult?.Item) throw new Error("User not found");
-  if (!groupResult.Item.quizIds?.length) throw new Error("Group has no quizzes");
+  if (!groupResult.Item.quizIds?.length)
+    throw new Error("Group has no quizzes");
 
   return [groupResult.Item, userResult.Item];
 };
@@ -84,17 +105,26 @@ const validateUserEligibility = async (userId, groupQuizIds) => {
 
   if (passedQuizIds.length < groupQuizIds.length) {
     throw new Error(
-      `You must pass all quizzes in this group. ${groupQuizIds.length - passedQuizIds.length} quiz(es) remaining.`
+      `You must pass all quizzes in this group. ${
+        groupQuizIds.length - passedQuizIds.length
+      } quiz(es) remaining.`
     );
   }
 
   return { passedQuizIds, passedSubmissions };
 };
 
-const createAndSaveCertificate = async (group, user, passedQuizIds, passedSubmissions) => {
+const createAndSaveCertificate = async (
+  group,
+  user,
+  passedQuizIds,
+  passedSubmissions
+) => {
   const certificateId = uid.rnd().toUpperCase();
   const submissionId = uuidv4(); // Generate unique submissionId for group certificate
-  const formattedDateTime = moment().utc().format("Do MMMM YYYY HH:mm:ss [UTC]");
+  const formattedDateTime = moment()
+    .utc()
+    .format("Do MMMM YYYY HH:mm:ss [UTC]");
 
   const averagePercentage = Math.round(
     passedSubmissions.reduce((sum, s) => sum + (s.percentageScore || 0), 0) /
@@ -111,7 +141,7 @@ const createAndSaveCertificate = async (group, user, passedQuizIds, passedSubmis
       groupName: group?.name || "Group",
       averagePercentage,
       certificateId,
-      completionText: `For successfully completing all quizzes in the ${group.name} group on ${formattedDateTime}.`,
+      completionText: `For successfully completing all quizzes in the ${group.name} (group certificate) on ${formattedDateTime}.`,
     },
   });
 
@@ -144,31 +174,38 @@ const createAndSaveCertificate = async (group, user, passedQuizIds, passedSubmis
   return { certificateId, certificateUrl, averagePercentage, submissionId };
 };
 
-const updateGroupCertificateInfo = async (groupId, userId, certificateUrl, submissionId, group) => {
+const updateGroupCertificateInfo = async (
+  groupId,
+  userId,
+  certificateUrl,
+  submissionId,
+  group
+) => {
   // Update certificate URL for this user - merge with existing certificateUrls
   const existingUrls = group.certificateUrls || {};
   const updatedUrls = {
     ...existingUrls,
     [userId]: certificateUrl,
   };
-  
+
   // Update certificate submission IDs - merge with existing
   const existingSubmissionIds = group.certificateSubmissionIds || {};
   const updatedSubmissionIds = {
     ...existingSubmissionIds,
     [userId]: submissionId,
   };
-  
+
   // Update certificateTakenBy array - add userId if not present
   const existingTakenBy = group.certificateTakenBy || [];
-  const updatedTakenBy = existingTakenBy.includes(userId) 
-    ? existingTakenBy 
+  const updatedTakenBy = existingTakenBy.includes(userId)
+    ? existingTakenBy
     : [...existingTakenBy, userId];
-  
+
   await updateItemInDynamoDB({
     table: TABLE_NAME.GROUPS,
     Key: { id: groupId },
-    UpdateExpression: "SET certificateUrls = :certificateUrls, certificateSubmissionIds = :certificateSubmissionIds, certificateTakenBy = :certificateTakenBy",
+    UpdateExpression:
+      "SET certificateUrls = :certificateUrls, certificateSubmissionIds = :certificateSubmissionIds, certificateTakenBy = :certificateTakenBy",
     ExpressionAttributeValues: {
       ":certificateUrls": updatedUrls,
       ":certificateSubmissionIds": updatedSubmissionIds,
@@ -194,6 +231,20 @@ const getAutoFontSize = (
   const idealSize = Math.floor(wrapWidth / unitWidth);
   // clamp between minSize and defaultSize
   return Math.max(minSize, Math.min(defaultSize, idealSize));
+};
+
+/**
+ * Convert hex color code to RGB values for pdf-lib
+ * @param {string} hex - Hex color code (e.g., "#FF0000" or "FF0000")
+ * @returns {Object} RGB object with r, g, b values (0-1 range)
+ */
+const hexToRgb = (hex) => {
+  // Remove # if present
+  const cleanHex = hex.replace("#", "");
+  const r = parseInt(cleanHex.substring(0, 2), 16) / 255;
+  const g = parseInt(cleanHex.substring(2, 4), 16) / 255;
+  const b = parseInt(cleanHex.substring(4, 6), 16) / 255;
+  return { r, g, b };
 };
 
 const generateCertificate = async ({
@@ -243,19 +294,44 @@ const generateCertificate = async ({
     color: linkColor,
   });
 
-  // Draw completion text - using custom completionText if provided, otherwise fallback
-  const completionText =
-    fields.completionText ||
-    `For successfully completing ${fields.groupName || fields.quizName} with score of ${fields.averagePercentage || fields.percentage}% on ${fields.dateTime}.`;
-  
-  page.drawText(completionText, {
-    x: 80,
-    y: height - 520,
-    size: 18,
-    color: rgb(0, 0, 0),
-    maxWidth: wrapWidth,
-    lineHeight: 32,
-  });
+  // Draw completion text - highlight groupName in red for group certificates
+  if (fields.groupName && fields.completionText) {
+    // For group certificates: "For successfully completing [groupName in red] on [dateTime]"
+    const textBefore = "For successfully completing all quizzes in the ";
+    const groupName = fields.groupName;
+    const textAfter = ` (group certificate) on ${fields.dateTime}`;
+
+    const fontSize = 18;
+    let currentX = 80;
+    const y = height - 520;
+
+    // Draw "For successfully completing "
+    page.drawText(textBefore, {
+      x: currentX,
+      y: y,
+      size: fontSize,
+      color: rgb(0, 0, 0),
+    });
+    currentX += font.widthOfTextAtSize(textBefore, fontSize);
+
+    const groupNameHex = "dc2626";
+    const { r, g, b } = hexToRgb(groupNameHex);
+    page.drawText(groupName, {
+      x: currentX,
+      y: y,
+      size: fontSize,
+      color: rgb(r, g, b),
+    });
+    currentX += font.widthOfTextAtSize(groupName, fontSize);
+
+    // Draw " on [dateTime]"
+    page.drawText(textAfter, {
+      x: currentX,
+      y: y,
+      size: fontSize,
+      color: rgb(0, 0, 0),
+    });
+  }
 
   const filledBytes = await pdfDoc.save();
   await uploadBufferToS3(
@@ -268,4 +344,3 @@ const generateCertificate = async ({
 
   return `s3://${bucket}/${outputKey}`;
 };
-

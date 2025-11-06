@@ -12,6 +12,7 @@ import { getTimestamp, sendResponse } from "../../helpers/helpers.js";
 import moment from "moment";
 import { fetchQuizWithQuestions } from "../common/quizzes.js";
 import { transactWriteInDynamoDB } from "../../helpers/dynamodb.js";
+import { awardXP } from "../../helpers/awardXP.js";
 
 const uid = new ShortUniqueId({ length: 12 });
 
@@ -143,6 +144,15 @@ export const handler = async (event) => {
     // Execute all operations in a single transaction
     await transactWriteInDynamoDB({ TransactItems: transactionItems });
 
+    // Award XP based on certificate completion or attempt
+    if (passed) {
+      // Award 100 XP for successful certificate completion
+      await awardXP(userId, 100, "Certificate completion");
+    } else {
+      // Award 20 XP for failed certificate exam attempt
+      await awardXP(userId, 20, "Certificate exam attempt (failed)");
+    }
+
     // Return response
     return sendResponse(200, "Quiz submitted successfully", {
       submissionId,
@@ -231,6 +241,20 @@ const getAutoFontSize = (
   return Math.max(minSize, Math.min(defaultSize, idealSize));
 };
 
+/**
+ * Convert hex color code to RGB values for pdf-lib
+ * @param {string} hex - Hex color code (e.g., "#FF0000" or "FF0000")
+ * @returns {Object} RGB object with r, g, b values (0-1 range)
+ */
+const hexToRgb = (hex) => {
+  // Remove # if present
+  const cleanHex = hex.replace("#", "");
+  const r = parseInt(cleanHex.substring(0, 2), 16) / 255;
+  const g = parseInt(cleanHex.substring(2, 4), 16) / 255;
+  const b = parseInt(cleanHex.substring(4, 6), 16) / 255;
+  return { r, g, b };
+};
+
 const generateCertificate = async ({
   bucket,
   templateKey,
@@ -278,18 +302,42 @@ const generateCertificate = async ({
     color: linkColor,
   });
 
-  // Draw completion text
-  page.drawText(
-    `For successfully completing ${fields.quizName} with score of ${fields.percentage}% on ${fields.dateTime}.`,
-    {
-      x: 80,
-      y: height - 520,
-      size: 18,
-      color: rgb(0, 0, 0),
-      maxWidth: wrapWidth,
-      lineHeight: 32,
-    }
-  );
+  // Draw completion text - highlight quizName in red
+  const textBefore = "For successfully completing ";
+  const quizName = fields.quizName;
+  const textAfter = ` on ${fields.dateTime}.`;
+
+  const fontSize = 18;
+  let currentX = 80;
+  const y = height - 520;
+
+  // Draw "For successfully completing "
+  page.drawText(textBefore, {
+    x: currentX,
+    y: y,
+    size: fontSize,
+    color: rgb(0, 0, 0),
+  });
+  currentX += font.widthOfTextAtSize(textBefore, fontSize);
+
+  // Draw quizName in red
+  const quizNameHex = "dc2626";
+  const { r, g, b } = hexToRgb(quizNameHex);
+  page.drawText(quizName, {
+    x: currentX,
+    y: y,
+    size: fontSize,
+    color: rgb(r, g, b),
+  });
+  currentX += font.widthOfTextAtSize(quizName, fontSize);
+
+  // Draw " on [dateTime]."
+  page.drawText(textAfter, {
+    x: currentX,
+    y: y,
+    size: fontSize,
+    color: rgb(0, 0, 0),
+  });
 
   const filledBytes = await pdfDoc.save();
   await uploadBufferToS3(
