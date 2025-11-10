@@ -55,11 +55,9 @@ custom:
     httpPort: 4000
 
   splitStacks:
-    perFunction: false
-    perType: true
-    perGroupFunction: true
-    nestedStackCount: 50
-    stackConcurrency: 10
+    perFunction: true
+    nestedStackCount: 200
+    stackConcurrency: 20
     ignore:
       - AWS::Cognito::*
 
@@ -281,6 +279,12 @@ functions:
           method: get
           private: true
           cors: true
+
+  shuffleDummyLeaderboard:
+    handler: functions/users/shuffleDummyLeaderboard.handler
+    events:
+      - schedule:
+          rate: cron(0 0 ? * MON *) # Runs every Monday at midnight UTC (weekly)
 
   isUserExistInDB:
     handler: functions/auth/isUserExistInDB.handler
