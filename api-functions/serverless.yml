@@ -277,7 +277,7 @@ functions:
       - http:
           path: /get-leaderboard
           method: get
-          private: true
+          private: false
           cors: true
 
   shuffleDummyLeaderboard:
