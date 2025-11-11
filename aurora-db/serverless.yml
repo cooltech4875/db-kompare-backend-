@@ -19,6 +19,7 @@ provider:
         - dynamodb:PutItem
         - dynamodb:UpdateItem
         - dynamodb:DeleteItem
+        - dynamodb:BatchGetItem
         - dynamodb:Query
         - dynamodb:Scan
         - s3:ListBucket
@@ -26,11 +27,13 @@ provider:
         - s3:PutObject
       Resource:
         - Fn::Sub: "arn:aws:rds:${AWS::Region}:${AWS::AccountId}:db-cluster:${AuroraCluster}"
-        - "arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/db-kompare-questions-dev"
-        - "arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/db-kompare-solutions-dev"
-        - "arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/db-kompare-submissions-dev"
-        - "arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/db-kompare-fiddles-dev"
-        - "arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/db-kompare-fiddles-dev/index/*"
+        - "arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/db-kompare-questions-${self:provider.stage}"
+        - "arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/db-kompare-solutions-${self:provider.stage}"
+        - "arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/db-kompare-submissions-${self:provider.stage}"
+        - "arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/db-kompare-fiddles-${self:provider.stage}"
+        - "arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/db-kompare-fiddles-${self:provider.stage}/index/*"
+        - "arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/db-kompare-users-${self:provider.stage}"
+        - "arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/db-kompare-user-achievements-${self:provider.stage}"
   environment:
     PG_HOST: ${self:custom.outputs.AuroraClusterEndpoint}
     PG_USER: "dbadmin"
@@ -39,6 +42,12 @@ provider:
     PG_PASSWORD: ${env:DB_PASSWORD}
     BUCKET_URL: ${env:BUCKET_URL}
     BUCKET_NAME: ${env:BUCKET_NAME}
+    USERS_TABLE: db-kompare-users-${self:provider.stage}
+    USER_ACHIEVEMENTS_TABLE: db-kompare-user-achievements-${self:provider.stage}
+    QUESTIONS_TABLE: db-kompare-questions-${self:provider.stage}
+    SOLUTIONS_TABLE: db-kompare-solutions-${self:provider.stage}
+    SUBMISSIONS_TABLE: db-kompare-submissions-${self:provider.stage}
+    FIDDLES_TABLE: db-kompare-fiddles-${self:provider.stage}
   apiGateway:
     apiKeys:
       - name: aurora-key
@@ -169,6 +178,15 @@ functions:
           path: /execute-query
           method: POST
           private: true
+          cors: true
+
+  topRankers:
+    handler: functions/users/topRankers.handler
+    events:
+      - http:
+          path: /top-rankers
+          method: get
+          private: false
           cors: true
 
   createUserSchema:

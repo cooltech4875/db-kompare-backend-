@@ -1,11 +1,12 @@
 // src/constants/enums.js
 
 export const TABLE_NAME = {
-  QUESTIONS: "db-kompare-questions-dev",
-  SOLUTIONS: "db-kompare-solutions-dev",
-  SUBMISSIONS: "db-kompare-submissions-dev",
-  FIDDLES: "db-kompare-fiddles-dev",
-  USERS: "db-kompare-users-dev",
+  QUESTIONS: process.env.QUESTIONS_TABLE,
+  SOLUTIONS: process.env.SOLUTIONS_TABLE,
+  SUBMISSIONS: process.env.SUBMISSIONS_TABLE,
+  FIDDLES: process.env.FIDDLES_TABLE,
+  USERS: process.env.USERS_TABLE,
+  USER_ACHIEVEMENTS: process.env.USER_ACHIEVEMENTS_TABLE,
 };
 
 export const LessonCategory = {
