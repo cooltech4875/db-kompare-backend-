@@ -270,16 +270,6 @@ functions:
           method: get
           private: true
           cors: true
-
-  getLeaderboard:
-    handler: functions/users/getLeaderboard.handler
-    events:
-      - http:
-          path: /get-leaderboard
-          method: get
-          private: false
-          cors: true
-
   isUserExistInDB:
     handler: functions/auth/isUserExistInDB.handler
     events:
