@@ -189,6 +189,15 @@ functions:
           private: false
           cors: true
 
+  awardXP:
+    handler: functions/users/awardXP.handler
+    events:
+      - http:
+          path: /award-xp
+          method: post
+          private: false
+          cors: true
+
   createUserSchema:
     handler: functions/schemas/createUserSchema.handler
     events:
