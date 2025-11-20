@@ -13,6 +13,7 @@ custom:
   UserAchievementsTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.USER_ACHIEVEMENTS_TABLE}
   certificatesTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.CERTIFICATES_TABLE}
   dbToolCategoriesTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.DB_TOOL_CATEGORIES_TABLE}
+  dbRankingCategoriesTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.DB_RANKING_CATEGORIES_TABLE}
 
   serverless-offline:
     httpPort: 4000
@@ -36,6 +37,7 @@ provider:
     USER_ACHIEVEMENTS_TABLE: db-kompare-user-achievements-${self:provider.stage}
     CERTIFICATES_TABLE: db-kompare-certificates-${self:provider.stage}
     DB_TOOL_CATEGORIES_TABLE: db-kompare-dbtools-categories-${self:provider.stage}
+    DB_RANKING_CATEGORIES_TABLE: db-kompare-dbrankings-categories-${self:provider.stage}
 
 
   apiGateway:
@@ -67,6 +69,8 @@ provider:
             - ${self:custom.certificatesTableArn}/index/* # Permission for certificates table indexes
             - ${self:custom.dbToolCategoriesTableArn} # Permission for DB tool categories table
             - ${self:custom.dbToolCategoriesTableArn}/index/* # Permission for DB tool categories table indexes
+            - ${self:custom.dbRankingCategoriesTableArn} # Permission for DB ranking categories table
+            - ${self:custom.dbRankingCategoriesTableArn}/index/* # Permission for DB ranking categories table indexes
 
 functions:
   createComment:
@@ -199,5 +203,40 @@ functions:
     events:
       - http:
           path: /delete-dbtool-category
+          method: delete
+          cors: true
+
+  # --------------- DB RANKING CATEGORIES FUNCTIONS -------------
+  addDbRankingCategory:
+    handler: functions/dbrankings-categories/addDbRankingCategory.handler
+    events:
+      - http:
+          path: /add-dbranking-category
+          method: post
+          cors: true
+          private: true
+
+  getDbRankingCategories:
+    handler: functions/dbrankings-categories/getDbRankingCategories.handler
+    events:
+      - http:
+          path: /get-dbranking-categories
+          method: get
+          cors: true
+
+  editDbRankingCategory:
+    handler: functions/dbrankings-categories/editDbRankingCategory.handler
+    events:
+      - http:
+          path: /edit-dbranking-category/{id}
+          method: put
+          cors: true
+          private: true
+
+  deleteDbRankingCategory:
+    handler: functions/dbrankings-categories/deleteDbRankingCategory.handler
+    events:
+      - http:
+          path: /delete-dbranking-category
           method: delete
           cors: true
