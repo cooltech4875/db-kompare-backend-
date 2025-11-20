@@ -12,6 +12,7 @@ custom:
   quizProgressTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.QUIZ_PROGRESS_TABLE}
   UserAchievementsTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.USER_ACHIEVEMENTS_TABLE}
   certificatesTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.CERTIFICATES_TABLE}
+  dbToolCategoriesTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.DB_TOOL_CATEGORIES_TABLE}
 
   serverless-offline:
     httpPort: 4000
@@ -34,6 +35,7 @@ provider:
     QUIZ_PROGRESS_TABLE: db-kompare-user-quiz-progress-${self:provider.stage}
     USER_ACHIEVEMENTS_TABLE: db-kompare-user-achievements-${self:provider.stage}
     CERTIFICATES_TABLE: db-kompare-certificates-${self:provider.stage}
+    DB_TOOL_CATEGORIES_TABLE: db-kompare-dbtools-categories-${self:provider.stage}
 
 
   apiGateway:
@@ -63,6 +65,8 @@ provider:
             - ${self:custom.UserAchievementsTableArn}/index/* # Permission for user achievements table indexes
             - ${self:custom.certificatesTableArn} # Permission for certificates table
             - ${self:custom.certificatesTableArn}/index/* # Permission for certificates table indexes
+            - ${self:custom.dbToolCategoriesTableArn} # Permission for DB tool categories table
+            - ${self:custom.dbToolCategoriesTableArn}/index/* # Permission for DB tool categories table indexes
 
 functions:
   createComment:
@@ -170,3 +174,30 @@ functions:
           cors: true
     layers:
       - arn:aws:lambda:${self:provider.region}:${aws:accountId}:layer:stripe-layer:2
+
+  # --------------- DB TOOL CATEGORIES FUNCTIONS -------------
+  addDbToolCategory:
+    handler: functions/dbtools-categories/addDbToolCategory.handler
+    events:
+      - http:
+          path: /add-dbtool-category
+          method: post
+          cors: true
+          private: true
+
+  editDbToolCategory:
+    handler: functions/dbtools-categories/editDbToolCategory.handler
+    events:
+      - http:
+          path: /edit-dbtool-category/{id}
+          method: put
+          cors: true
+          private: true
+
+  deleteDbToolCategory:
+    handler: functions/dbtools-categories/deleteDbToolCategory.handler
+    events:
+      - http:
+          path: /delete-dbtool-category
+          method: delete
+          cors: true

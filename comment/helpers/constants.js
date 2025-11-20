@@ -4,11 +4,18 @@ export const TABLE_NAME = {
   QUIZ_PROGRESS: process.env.QUIZ_PROGRESS_TABLE,
   USER_ACHIEVEMENTS: process.env.USER_ACHIEVEMENTS_TABLE,
   CERTIFICATES: process.env.CERTIFICATES_TABLE,
+  DB_TOOL_CATEGORIES: process.env.DB_TOOL_CATEGORIES_TABLE,
 };
 
 export const STATUS = {
   ACTIVE: "ACTIVE",
   DISABLED: "DISABLED",
+};
+
+export const DB_TOOL_STATUS = {
+  ALL: "ALL",
+  ACTIVE: "ACTIVE",
+  INACTIVE: "INACTIVE",
 };
 
 export const ENTITY_TYPE = {
