@@ -410,15 +410,6 @@ functions:
           cors: true
           private: true
 
-  addDbToolCategory:
-    handler: functions/dbtools-categories/addDbToolCategory.handler
-    events:
-      - http:
-          path: /add-dbtool-category
-          method: post
-          cors: true
-          private: true
-
   getDbToolCategories:
     handler: functions/dbtools-categories/getDbToolCategories.handler
     events:
@@ -453,14 +444,6 @@ functions:
           cors: true
           private: true
 
-  editDbToolCategory:
-    handler: functions/dbtools-categories/editDbToolCategory.handler
-    events:
-      - http:
-          path: /edit-dbtool-category
-          method: put
-          cors: true
-          private: true
 
   getDatabasesByIds:
     handler: functions/databases/getDatabaseByIds.handler
