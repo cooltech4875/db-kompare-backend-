@@ -6,6 +6,7 @@ export const TABLE_NAME = {
   CERTIFICATES: process.env.CERTIFICATES_TABLE,
   DB_TOOL_CATEGORIES: process.env.DB_TOOL_CATEGORIES_TABLE,
   DB_RANKING_CATEGORIES: process.env.DB_RANKING_CATEGORIES_TABLE,
+  QUIZZES_SUBMISSIONS: process.env.QUIZZES_SUBMISSIONS_TABLE,
 };
 
 export const STATUS = {
@@ -23,4 +24,9 @@ export const ENTITY_TYPE = {
   DATABASE: "database",
   DBTOOL: "dbtool",
   BLOG: "blog",
+};
+
+export const QUIZ_SUBMISSION_STATUS = {
+  PASSED: "PASSED",
+  FAILED: "FAILED",
 };

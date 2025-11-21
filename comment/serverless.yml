@@ -14,6 +14,7 @@ custom:
   certificatesTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.CERTIFICATES_TABLE}
   dbToolCategoriesTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.DB_TOOL_CATEGORIES_TABLE}
   dbRankingCategoriesTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.DB_RANKING_CATEGORIES_TABLE}
+  quizSubmissionsTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.QUIZZES_SUBMISSIONS_TABLE}
 
   serverless-offline:
     httpPort: 4000
@@ -38,6 +39,7 @@ provider:
     CERTIFICATES_TABLE: db-kompare-certificates-${self:provider.stage}
     DB_TOOL_CATEGORIES_TABLE: db-kompare-dbtools-categories-${self:provider.stage}
     DB_RANKING_CATEGORIES_TABLE: db-kompare-dbrankings-categories-${self:provider.stage}
+    QUIZZES_SUBMISSIONS_TABLE: db-kompare-quiz-submissions-${self:provider.stage}
 
 
   apiGateway:
@@ -71,6 +73,8 @@ provider:
             - ${self:custom.dbToolCategoriesTableArn}/index/* # Permission for DB tool categories table indexes
             - ${self:custom.dbRankingCategoriesTableArn} # Permission for DB ranking categories table
             - ${self:custom.dbRankingCategoriesTableArn}/index/* # Permission for DB ranking categories table indexes
+            - ${self:custom.quizSubmissionsTableArn} # Permission for quiz submissions table
+            - ${self:custom.quizSubmissionsTableArn}/index/* # Permission for quiz submissions table indexes
 
 functions:
   createComment:
@@ -146,6 +150,15 @@ functions:
       - http:
           path: /update-quiz-progress
           method: put
+          private: true
+          cors: true
+
+  getQuizAnalytics:
+    handler: functions/quizzes/getQuizAnalytics.handler
+    events:
+      - http:
+          path: /get-quiz-analytics
+          method: post
           private: true
           cors: true
 

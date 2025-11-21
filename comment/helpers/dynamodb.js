@@ -267,3 +267,46 @@ export const fetchItemsByIds = async (table, ids, keyName) => {
     return [];
   }
 };
+
+export const fetchAllItemsByScan = async ({
+  TableName,
+  FilterExpression = null,
+  ExpressionAttributeNames = null,
+  ExpressionAttributeValues = null,
+}) => {
+  let lastEvaluatedKey;
+  const allItems = [];
+
+  try {
+    do {
+      const params = {
+        TableName,
+      };
+
+      if (lastEvaluatedKey) {
+        params.ExclusiveStartKey = lastEvaluatedKey;
+      }
+
+      if (FilterExpression) {
+        params.FilterExpression = FilterExpression;
+      }
+
+      if (ExpressionAttributeNames) {
+        params.ExpressionAttributeNames = ExpressionAttributeNames;
+      }
+
+      if (ExpressionAttributeValues) {
+        params.ExpressionAttributeValues = ExpressionAttributeValues;
+      }
+
+      const response = await DynamoDBClient.scan(params).promise();
+      allItems.push(...(response.Items || []));
+      lastEvaluatedKey = response.LastEvaluatedKey;
+    } while (lastEvaluatedKey);
+  } catch (error) {
+    console.error("Failed to scan items:", error);
+    throw new Error("Error scanning items from DynamoDB");
+  }
+
+  return allItems;
+};
