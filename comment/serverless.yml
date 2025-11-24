@@ -13,6 +13,7 @@ custom:
   UserAchievementsTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.USER_ACHIEVEMENTS_TABLE}
   certificatesTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.CERTIFICATES_TABLE}
   dbToolCategoriesTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.DB_TOOL_CATEGORIES_TABLE}
+  dbToolsTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.DB_TOOLS_TABLE}
   dbRankingCategoriesTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.DB_RANKING_CATEGORIES_TABLE}
   quizSubmissionsTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.QUIZZES_SUBMISSIONS_TABLE}
 
@@ -38,6 +39,7 @@ provider:
     USER_ACHIEVEMENTS_TABLE: db-kompare-user-achievements-${self:provider.stage}
     CERTIFICATES_TABLE: db-kompare-certificates-${self:provider.stage}
     DB_TOOL_CATEGORIES_TABLE: db-kompare-dbtools-categories-${self:provider.stage}
+    DB_TOOLS_TABLE: db-kompare-dbtools-${self:provider.stage}
     DB_RANKING_CATEGORIES_TABLE: db-kompare-dbrankings-categories-${self:provider.stage}
     QUIZZES_SUBMISSIONS_TABLE: db-kompare-quiz-submissions-${self:provider.stage}
 
@@ -71,6 +73,8 @@ provider:
             - ${self:custom.certificatesTableArn}/index/* # Permission for certificates table indexes
             - ${self:custom.dbToolCategoriesTableArn} # Permission for DB tool categories table
             - ${self:custom.dbToolCategoriesTableArn}/index/* # Permission for DB tool categories table indexes
+            - ${self:custom.dbToolsTableArn} # Permission for DB tools table
+            - ${self:custom.dbToolsTableArn}/index/* # Permission for DB tools table indexes
             - ${self:custom.dbRankingCategoriesTableArn} # Permission for DB ranking categories table
             - ${self:custom.dbRankingCategoriesTableArn}/index/* # Permission for DB ranking categories table indexes
             - ${self:custom.quizSubmissionsTableArn} # Permission for quiz submissions table
@@ -253,3 +257,31 @@ functions:
           path: /delete-dbranking-category
           method: delete
           cors: true
+
+  # --------------- DB TOOLS FUNCTIONS -------------
+  addDbTool:
+    handler: functions/dbtools/addDbTool.handler
+    events:
+      - http:
+          path: /add-dbtool
+          method: post
+          cors: true
+          private: true
+
+  updateDbTool:
+    handler: functions/dbtools/updateDbTool.handler
+    events:
+      - http:
+          path: /update-dbtool/{id}
+          method: put
+          cors: true
+          private: true
+
+  deleteDbTool:
+    handler: functions/dbtools/deleteDbTool.handler
+    events:
+      - http:
+          path: /delete-dbtool
+          method: delete
+          cors: true
+          private: true
