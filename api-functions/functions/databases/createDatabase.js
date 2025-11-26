@@ -1,15 +1,21 @@
 import { createItemInDynamoDB } from "../../helpers/dynamodb.js";
 import { v4 as uuidv4 } from "uuid";
 import { TABLE_NAME, DATABASE_STATUS } from "../../helpers/constants.js";
-import { sendResponse } from "../../helpers/helpers.js";
+import { sendResponse, getTimestamp } from "../../helpers/helpers.js";
 
 export const handler = async (event, context, callback) => {
   // Parse the incoming request body
   let params = JSON.parse(event.body);
 
-  // Add a unique ID to the item
+  // Generate unique ID and timestamps
+  const createdAt = getTimestamp();
+  const updatedAt = createdAt;
+
+  // Add a unique ID and timestamps to the item
   params.id = uuidv4();
-  params.status = DATABASE_STATUS.INACTIVE;
+  params.status = DATABASE_STATUS.ACTIVE;
+  params.createdAt = createdAt;
+  params.updatedAt = updatedAt;
 
   console.log("Filtered and validated params:", JSON.stringify(params));
 

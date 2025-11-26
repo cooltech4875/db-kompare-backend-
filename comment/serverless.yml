@@ -16,6 +16,7 @@ custom:
   dbToolsTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.DB_TOOLS_TABLE}
   dbRankingCategoriesTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.DB_RANKING_CATEGORIES_TABLE}
   quizSubmissionsTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.QUIZZES_SUBMISSIONS_TABLE}
+  databasesTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.DATABASES_TABLE}
 
   serverless-offline:
     httpPort: 4000
@@ -42,6 +43,7 @@ provider:
     DB_TOOLS_TABLE: db-kompare-dbtools-${self:provider.stage}
     DB_RANKING_CATEGORIES_TABLE: db-kompare-dbrankings-categories-${self:provider.stage}
     QUIZZES_SUBMISSIONS_TABLE: db-kompare-quiz-submissions-${self:provider.stage}
+    DATABASES_TABLE: db-kompare-databases-${self:provider.stage}
 
 
   apiGateway:
@@ -79,6 +81,8 @@ provider:
             - ${self:custom.dbRankingCategoriesTableArn}/index/* # Permission for DB ranking categories table indexes
             - ${self:custom.quizSubmissionsTableArn} # Permission for quiz submissions table
             - ${self:custom.quizSubmissionsTableArn}/index/* # Permission for quiz submissions table indexes
+            - ${self:custom.databasesTableArn} # Permission for databases table
+            - ${self:custom.databasesTableArn}/index/* # Permission for databases table indexes
 
 functions:
   createComment:
@@ -282,6 +286,25 @@ functions:
     events:
       - http:
           path: /delete-dbtool
+          method: delete
+          cors: true
+          private: true
+
+  # --------------- DATABASES FUNCTIONS -------------
+  editDatabase:
+    handler: functions/databases/editDatabase.handler
+    events:
+      - http:
+          path: /edit-database/{id}
+          method: put
+          cors: true
+          private: true
+
+  deleteDatabase:
+    handler: functions/databases/deleteDatabase.handler
+    events:
+      - http:
+          path: /delete-database
           method: delete
           cors: true
           private: true

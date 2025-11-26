@@ -8,6 +8,7 @@ export const TABLE_NAME = {
   DB_TOOLS: process.env.DB_TOOLS_TABLE,
   DB_RANKING_CATEGORIES: process.env.DB_RANKING_CATEGORIES_TABLE,
   QUIZZES_SUBMISSIONS: process.env.QUIZZES_SUBMISSIONS_TABLE,
+  DATABASES: process.env.DATABASES_TABLE,
 };
 
 export const STATUS = {
@@ -16,6 +17,12 @@ export const STATUS = {
 };
 
 export const DB_TOOL_STATUS = {
+  ALL: "ALL",
+  ACTIVE: "ACTIVE",
+  INACTIVE: "INACTIVE",
+};
+
+export const DATABASE_STATUS = {
   ALL: "ALL",
   ACTIVE: "ACTIVE",
   INACTIVE: "INACTIVE",
