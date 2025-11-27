@@ -99,38 +99,41 @@ const calculateScoreAndRankChanges = async (
 
     const result = await Promise.all(
       Object.keys(dbToolMap).map(async (dbtoolId) => {
-        const toolData = dbToolMap[dbtoolId];
+        try {
+          const toolData = dbToolMap[dbtoolId];
+          const sortedData = sortDataByDate(toolData);
+          const mostRecentData = getMostRecentData(sortedData, endDate);
 
-        const sortedData = sortDataByDate(toolData);
-        const mostRecentData = getMostRecentData(sortedData, endDate);
+          if (!mostRecentData) {
+            return null;
+          }
 
-        if (!mostRecentData) {
+          const dbToolDetail = await fetchDbToolById(dbtoolId);
+          if (!dbToolDetail) {
+            return null;
+          }
+
+          const categoryDetail = dbToolDetail.category_id
+            ? await fetchDbToolCategoryDetail(dbToolDetail.category_id)
+            : null;
+
+          const { scoreChanges, rankChanges } = calculateChanges(
+            sortedData,
+            mostRecentData
+          );
+
+          return {
+            dbtool_id: dbtoolId,
+            name: dbToolDetail.tool_name,
+            category: categoryDetail?.name || "Unknown",
+            category_id: dbToolDetail.category_id || null,
+            scoreChanges,
+            rankChanges,
+          };
+        } catch (error) {
+          console.error(`Error processing dbtoolId ${dbtoolId}:`, error.message);
           return null;
         }
-
-        const dbToolDetail = await fetchDbToolById(dbtoolId);
-        if (!dbToolDetail) {
-          console.warn(`No DB tool details found for ${dbtoolId}`);
-          return null;
-        }
-
-        const categoryDetail = await fetchDbToolCategoryDetail(
-          dbToolDetail.category_id
-        );
-
-        const { scoreChanges, rankChanges } = calculateChanges(
-          sortedData,
-          mostRecentData
-        );
-
-        return {
-          dbtool_id: dbtoolId,
-          name: dbToolDetail.tool_name,
-          category: categoryDetail ? categoryDetail.name : "Unknown",
-          category_id: dbToolDetail.category_id,
-          scoreChanges,
-          rankChanges,
-        };
       })
     );
 
