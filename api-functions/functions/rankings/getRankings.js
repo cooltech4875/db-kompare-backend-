@@ -100,6 +100,12 @@ export const handler = async (event) => {
 
 // Get database name
 const getDatabaseDetailsById = async (databaseId) => {
+  // Validate databaseId before making the query
+  if (!databaseId || typeof databaseId !== "string") {
+    console.warn(`Invalid databaseId provided to getDatabaseDetailsById: ${databaseId}`);
+    return null;
+  }
+
   const key = {
     id: databaseId,
   };
@@ -108,10 +114,13 @@ const getDatabaseDetailsById = async (databaseId) => {
     if (result.Item) {
       return result.Item;
     }
-    return "Unknown"; // Fallback if the database name is not found
+    // Item not found (might be deleted) - return null
+    console.warn(`Database not found (possibly deleted) for ID: ${databaseId}`);
+    return null;
   } catch (error) {
-    console.error(`Error fetching database name for ID ${databaseId}:`, error);
-    throw error;
+    console.error(`Error fetching database for ID ${databaseId}:`, error);
+    // Return null instead of throwing to prevent breaking the entire process
+    return null;
   }
 };
 
@@ -130,38 +139,42 @@ const calculateScoreAndRankChanges = async (
     // Step 2: Process each database's data
     const result = await Promise.all(
       Object.keys(databaseMap).map(async (databaseId) => {
-        const dbData = databaseMap[databaseId];
+        try {
+          const dbData = databaseMap[databaseId];
 
-        // Step 2.1: Sort data by date and get most recent data for the endDate
-        const sortedData = sortDataByDate(dbData);
-        const mostRecentData = getMostRecentData(sortedData, endDate);
+          // Step 2.1: Sort data by date and get most recent data for the endDate
+          const sortedData = sortDataByDate(dbData);
+          const mostRecentData = getMostRecentData(sortedData, endDate);
 
-        if (!mostRecentData) {
-          return null; // Skip databases without data for the endDate
+          if (!mostRecentData) {
+            return null;
+          }
+
+          // Step 2.2: Fetch database details
+          const databaseDetail = await getDatabaseDetailsById(databaseId);
+          if (!databaseDetail) {
+            return null;
+          }
+
+          // Step 2.3: Calculate score and rank changes
+          const { scoreChanges, rankChanges } = calculateChanges(
+            sortedData,
+            mostRecentData
+          );
+
+          // Return the processed data for the database
+          return {
+            database_id: databaseId,
+            name: databaseDetail.name,
+            database_model: databaseDetail.primary_database_model,
+            secondary_database_model: databaseDetail.secondary_database_models,
+            scoreChanges,
+            rankChanges,
+          };
+        } catch (error) {
+          console.error(`Error processing databaseId ${databaseId}:`, error.message);
+          return null;
         }
-
-        // Step 2.2: Fetch database details
-        const databaseDetail = await getDatabaseDetailsById(databaseId);
-        if (!databaseDetail) {
-          console.warn(`No database details found for ${databaseId}`);
-          return null; // Skip if database details are not found
-        }
-
-        // Step 2.3: Calculate score and rank changes
-        const { scoreChanges, rankChanges } = calculateChanges(
-          sortedData,
-          mostRecentData
-        );
-
-        // Return the processed data for the database
-        return {
-          database_id: databaseId,
-          name: databaseDetail.name,
-          database_model: databaseDetail.primary_database_model,
-          secondary_database_model: databaseDetail.secondary_database_models,
-          scoreChanges,
-          rankChanges,
-        };
       })
     );
 
