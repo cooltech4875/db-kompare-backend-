@@ -1,11 +1,10 @@
 import axios from "axios";
 import { delay } from "../helpers/helpers.js";
 
-const BING_API_KEY = process.env.BING_API_KEY;
-const BING_API_URL = "https://api.bing.microsoft.com/v7.0/search";
+const SERPAPI_KEY = process.env.SERPAPI_KEY;
+const SERPAPI_URL = "https://serpapi.com/search";
 
 export async function getBingMetrics(queries) {
-  const headers = { "Ocp-Apim-Subscription-Key": BING_API_KEY };
   const batchSize = 3; // Number of queries per batch
   const results = [];
 
@@ -16,12 +15,21 @@ export async function getBingMetrics(queries) {
     const batchResults = await Promise.all(
       batch.map(async (query) => {
         try {
-          const params = { q: query };
-          const response = await axios.get(BING_API_URL, { headers, params });
+          const params = {
+            engine: "bing",
+            q: query,
+            api_key: SERPAPI_KEY,
+          };
+          console.log("params", params);
+          const response = await axios.get(SERPAPI_URL, { params });
+          console.log("response", response.data);
+
+          // SerpApi does not provide webPages.totalEstimatedMatches
+          const totalMatches = response.data.organic_results?.length || 0; // closest alternative
+          console.log("totalMatches", "query", totalMatches, query);
           return {
             query,
-            totalEstimatedMatches:
-              response.data.webPages?.totalEstimatedMatches || 0,
+            totalEstimatedMatches: totalMatches,
           };
         } catch (error) {
           console.error(
