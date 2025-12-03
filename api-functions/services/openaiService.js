@@ -117,6 +117,9 @@ Instructions:
 6. IMPORTANT: For fields with numeric options (e.g., 1, 2, 3), return them as NUMBERS (integers), NOT strings. Example: "deployment_options_on_prem_or_saas": 2
 7. Only return the JSON object.`;
 
+    console.log("[OpenAI Service] Sending request to OpenAI API");
+    console.log("[OpenAI Service] Model: gpt-4o-mini");
+
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
@@ -131,6 +134,12 @@ Instructions:
       max_tokens: 1000,
     });
 
+    console.log("[OpenAI Service] OpenAI API response received");
+    console.log(
+      "[OpenAI Service] Response choices count:",
+      response.choices?.length || 0
+    );
+
     const content = response.choices[0]?.message?.content?.trim() || "";
     
     const jsonStr = content
@@ -138,7 +147,12 @@ Instructions:
       .replace(/```\n?/g, "")
       .trim();
 
+    console.log("[OpenAI Service] Cleaned JSON string length:", jsonStr.length);
     const data = JSON.parse(jsonStr);
+    console.log(
+      "[OpenAI Service] Parsed JSON data:",
+      JSON.stringify(data, null, 2)
+    );
 
     const result = {};
     missingFields.forEach((field) => {
