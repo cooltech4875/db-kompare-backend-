@@ -146,6 +146,7 @@ export const handler = async (event) => {
                 });
                 
                 console.log(`[getDbToolsByIds] Updated tool ${item.id} (${item.tool_name}) with OpenAI data`);
+                console.log(`[getDbToolsByIds] Updated fields: ${Object.keys(openAIData).join(", ")}`);
               } catch (updateError) {
                 console.error(`[getDbToolsByIds] Error updating tool ${item.id} (${item.tool_name}):`, updateError);        
               }
