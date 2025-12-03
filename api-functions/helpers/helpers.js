@@ -135,10 +135,14 @@ export const calculateGooglePopularity = (data) => {
 };
 
 export const calculateBingPopularity = (data) => {
-  const firstQueryMatches = data[0].totalEstimatedMatches || 0;
+  if (!data || !Array.isArray(data) || data.length === 0) {
+    return 0;
+  }
+
+  const firstQueryMatches = data[0]?.totalEstimatedMatches || 0;
 
   const totalQueriesSum = data.slice(1).reduce((sum, item) => {
-    return sum + (item.totalEstimatedMatches || 0);
+    return sum + (item?.totalEstimatedMatches || 0);
   }, 0);
 
   return firstQueryMatches * 0.5 - totalQueriesSum * 0.5;
