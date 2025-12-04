@@ -55,14 +55,14 @@ const ALLOWED_VALUES = {
   support_import_export_formats: ["Yes", "No", "Limited functionality"],
 };
 
-export async function fillMissingFields(tool, missingFields) {
-  if (missingFields.length === 0) {
+export async function populateDbToolFields(tool, fieldsToPopulate) {
+  if (fieldsToPopulate.length === 0) {
     return {};
   }
 
   try {
-    // Construct validation rules for missing fields
-    const validationRules = missingFields
+    // Construct validation rules for fields to populate
+    const validationRules = fieldsToPopulate
       .map((field) => {
         if (ALLOWED_VALUES[field]) {
           return `- ${field}: Must be one of [${ALLOWED_VALUES[field]
@@ -78,12 +78,12 @@ export async function fillMissingFields(tool, missingFields) {
       tool.tool_name || "this database tool"
     }.
 
-Goal: Fill in as many missing fields as possible with accurate information.
+Goal: Populate as many of the following fields as possible with accurate information.
 
-Missing fields that need information: ${missingFields.join(", ")}
+Fields that need information: ${fieldsToPopulate.join(", ")}
 
 Return a JSON object with these fields. Try to provide a value for every field.
-${missingFields.map((f) => `- ${f}`).join("\n")}
+${fieldsToPopulate.map((f) => `- ${f}`).join("\n")}
 
 STRICT VALIDATION RULES (You MUST select the best matching value from these lists for the respective fields):
 ${validationRules}
@@ -94,9 +94,7 @@ Context about the tool:
 - URL: ${tool.home_page_url || "N/A"}
 - Price: ${tool.price || "N/A"}
 - Features: ${
-      Array.isArray(tool.core_features)
-        ? tool.core_features.join(", ")
-        : "N/A"
+      Array.isArray(tool.core_features) ? tool.core_features.join(", ") : "N/A"
     }
 - AI Capabilities: ${tool.ai_capabilities || "N/A"}
 - Customization: ${tool.customization_possible || "N/A"}
@@ -112,10 +110,22 @@ Instructions:
 1. For each field, provide the most accurate value based on your knowledge.
 2. For dropdown fields (listed in VALIDATION RULES), you MUST choose one of the provided options.
 3. If you are unsure about a dropdown field, choose the option that best fits or a default like "DoesNotMatter" / "Limited" if applicable. Do not leave it empty if a reasonable guess can be made.
-4. For text fields, provide a concise and accurate description.
-5. "core_features" MUST be a JSON array of strings (e.g., ["Feature 1", "Feature 2"]).
-6. IMPORTANT: For fields with numeric options (e.g., 1, 2, 3), return them as NUMBERS (integers), NOT strings. Example: "deployment_options_on_prem_or_saas": 2
-7. Only return the JSON object.`;
+4. For text fields, provide a clear and informative description, not just a short phrase.
+5. For "tool_description", write **exactly 5 full sentences** in this order: (1) brief history with year of launch and year it gained popularity, and clearly state if it is a rework/re-skin of an older tool; (2) key algorithm or processing approach driving its success; (3) key architecture or design pattern driving its success; (4) the best business problem it solves, explained with a simple layman example that a business student can understand; (5) the latest important features released in the last 12 months. **Number these sentences explicitly as "1) ...", "2) ...", "3) ...", "4) ...", "5) ..." at the start of each sentence.** Each sentence MUST end with a period and be clearly separated.
+6. For "price", write **3-5 full sentences** explaining the pricing model in detail, including: (a) whether it is open source and under which license; (b) what commercial / hosted / enterprise options exist; (c) how customers are typically billed (per user/month, usage-based, etc.); and (d) total cost-of-ownership considerations for small teams vs enterprises. Do NOT respond with a short fragment like "Open source / Free" – always use multiple full sentences.
+7. For "dbkompare_view", write an **8-line tech critique** in this exact format, one numbered sentence per line:
+   1) Best architectural point.
+   2) Business problem most suited, with a layman example understood by business students.
+   3) Where it fails repeatedly in practice, with a layman example understood by business students.
+   4) How those failures have been addressed recently, with a layman example understood by business students.
+   5) Typical size / scale limits (data volume, concurrency, workload patterns).
+   6) Forecast of the tool over the next 2 years (technical and market position).
+   7) Other alternative tools if those failures are a big concern.
+   All lines MUST be numbered, plain text (no HTML), each a full sentence ending with a period.
+8. "core_features" MUST be a JSON array of strings (e.g., ["Feature 1", "Feature 2"]).
+9. If "useful_links" is requested, ALWAYS return a JSON array of 3-5 relevant URLs as strings (e.g., docs, GitHub repo, official site, community forum). Do not leave "useful_links" empty if you can infer good links.
+10. IMPORTANT: For fields with numeric options (e.g., 1, 2, 3), return them as NUMBERS (integers), NOT strings. Example: "deployment_options_on_prem_or_saas": 2
+11. Only return the JSON object.`;
 
     console.log("[OpenAI Service] Sending request to OpenAI API");
     console.log("[OpenAI Service] Model: gpt-4o-mini");
@@ -141,7 +151,7 @@ Instructions:
     );
 
     const content = response.choices[0]?.message?.content?.trim() || "";
-    
+
     const jsonStr = content
       .replace(/```json\n?/g, "")
       .replace(/```\n?/g, "")
@@ -155,7 +165,7 @@ Instructions:
     );
 
     const result = {};
-    missingFields.forEach((field) => {
+    fieldsToPopulate.forEach((field) => {
       // Check if field exists in response (even if null/undefined)
       if (field in data) {
         const value = data[field];
@@ -175,3 +185,102 @@ Instructions:
     return {};
   }
 }
+
+// Backwards-compatible aliases (if any other code still imports old names)
+export const fillMissingDbToolFields = populateDbToolFields;
+export const fillMissingFields = populateDbToolFields;
+
+export async function populateDatabaseFields(database, fieldsToPopulate) {
+  if (fieldsToPopulate.length === 0) {
+    return {};
+  }
+
+  try {
+    const prompt = `You are a database expert. Provide accurate information for the database "${
+      database.name || "this database"
+    }".
+
+Goal: Populate as many of the following fields as possible with accurate information.
+
+Fields that need information: ${fieldsToPopulate.join(", ")}
+
+Return a JSON object with these fields. Try to provide a value for every field.
+${fieldsToPopulate.map((f) => `- ${f}`).join("\n")}
+
+Context about the database:
+- Name: ${database.name || "N/A"}
+- Description: ${database.description || "N/A"}
+- Developer: ${database.developer || "N/A"}
+- Initial Release: ${database.initial_release || "N/A"}
+
+Instructions:
+1. For each field, provide the most accurate value based on your knowledge.
+2. For text fields, provide a clear and informative description, not just a short phrase, and break it into proper sentences.
+3. If you are asked to populate the "description" field for a database, write **exactly 5 full sentences** in this order: (1) brief history with year of launch and year it gained popularity, and clearly state if it is a rework/re-skin of an older system; (2) key algorithm or processing approach driving its success (e.g., MPP, cost-based optimizer, vectorization); (3) key architecture or storage/compute design driving its success; (4) the best business problem it solves, explained with a simple layman example that a business student can understand; (5) the latest important features released in the last 12 months. **Number these sentences explicitly as "1) ...", "2) ...", "3) ...", "4) ...", "5) ..." at the start of each sentence.** Each sentence MUST end with a period and be clearly separated.
+4. For "db_kompare_view", write an **8-line tech critique** in this exact format, one numbered sentence per line:
+   1) Best architectural point.
+   2) Business problem most suited, with a layman example understood by business students.
+   3) Where it fails repeatedly in practice, with a layman example understood by business students.
+   4) How those failures have been addressed recently, with a layman example understood by business students.
+   5) Typical size / scale limits (data volume, concurrency, workload patterns).
+   6) Forecast of the database over the next 2 years (technical and market position).
+   7) Other alternative databases / tools if those failures are a big concern.
+   All lines MUST be numbered, plain text (no HTML), each a full sentence ending with a period.
+5. For fields that require lists (e.g., supported_programming_languages, server_operating_systems, apis_and_other_access_methods, dbaas_offerings, implementation_language, partitioning_methods, queries, replication_methods, secondary_database_models), return a JSON array of strings.
+6. For boolean-like fields (e.g., "yes"/"no"), use "yes" or "no" as strings (lowercase) unless the field implies a more complex answer.
+7. Only return the JSON object.`;
+
+    console.log("[OpenAI Service] Sending request to OpenAI API for Database");
+    console.log("[OpenAI Service] Model: gpt-4o-mini");
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a helpful assistant that provides accurate information about databases. Return only valid JSON without markdown formatting. Try to fill all requested fields with the best available information.",
+        },
+        { role: "user", content: prompt },
+      ],
+      temperature: 0.7,
+      max_tokens: 1000,
+    });
+
+    console.log("[OpenAI Service] OpenAI API response received");
+    const content = response.choices[0]?.message?.content?.trim() || "";
+
+    const jsonStr = content
+      .replace(/```json\n?/g, "")
+      .replace(/```\n?/g, "")
+      .trim();
+
+    console.log("[OpenAI Service] Cleaned JSON string length:", jsonStr.length);
+    const data = JSON.parse(jsonStr);
+    console.log(
+      "[OpenAI Service] Parsed JSON data:",
+      JSON.stringify(data, null, 2)
+    );
+
+    const result = {};
+    fieldsToPopulate.forEach((field) => {
+      if (field in data) {
+        const value = data[field];
+        if (value !== null && value !== undefined && value !== "") {
+          result[field] = value;
+        }
+      }
+    });
+
+    return result;
+  } catch (error) {
+    console.error(
+      `[OpenAI Service] Error for database ${database.name}:`,
+      error.message
+    );
+    return {};
+  }
+}
+
+// Backwards-compatible alias for old name
+export const fillMissingDatabaseFields = populateDatabaseFields;
