@@ -131,7 +131,7 @@ Instructions:
 10. IMPORTANT: For fields with numeric options (e.g., 1, 2, 3), return them as NUMBERS (integers), NOT strings. Example: "deployment_options_on_prem_or_saas": 2
 11. Only return the JSON object.`;
 
-    console.log("[OpenAI Service] Sending request to OpenAI API");
+    console.log(`[OpenAI Service] Sending request to OpenAI API for Tool ${tool?.tool_name || ""}`);
     console.log("[OpenAI Service] Model: gpt-4o-mini");
 
     const response = await openai.chat.completions.create({
@@ -145,7 +145,7 @@ Instructions:
         { role: "user", content: prompt },
       ],
       temperature: 0.7,
-      max_tokens: 1000,
+      max_tokens: 2000,
     });
 
     console.log("[OpenAI Service] OpenAI API response received");
@@ -221,7 +221,8 @@ Instructions:
 1. For each field, provide the most accurate value based on your knowledge.
 2. For text fields, provide a clear and informative description, not just a short phrase, and break it into proper sentences.
 3. If you are asked to populate the "description" field for a database, write **exactly 5 full sentences** in this order: (1) brief history with year of launch and year it gained popularity, and clearly state if it is a rework/re-skin of an older system; (2) key algorithm or processing approach driving its success (e.g., MPP, cost-based optimizer, vectorization); (3) key architecture or storage/compute design driving its success; (4) the best business problem it solves, explained with a simple layman example that a business student can understand; (5) the latest important features released in the last 12 months. **Number these sentences explicitly as "1) ...", "2) ...", "3) ...", "4) ...", "5) ..." at the start of each sentence. Start the value directly with "1) ...", and then prefix only sentences 2–5 with a newline character (\\n2) ..., \\n3) ..., etc.) so that 2–5 each start on their own line.** Each sentence MUST end with a period and be clearly separated.
-4. For "db_kompare_view", write an **8-line tech critique** in this exact format, one numbered sentence per line:
+4. If you are asked to populate the "pricing" field for a database, write **3-5 full sentences** explaining the pricing model in detail, including: (a) whether it is open source and under which license; (b) what commercial / hosted / DBaaS / enterprise options exist; (c) how customers are typically billed (per node, per hour, per query, per TB stored/processed, etc.); and (d) total cost-of-ownership considerations for small deployments versus large enterprise clusters. **Number these sentences explicitly as "1) ...", "2) ...", "3) ...", "4) ...", "5) ..." (or up to the number of sentences you use) at the start of each sentence. Start the value directly with "1) ...", and then prefix only sentences 2+ with a newline character (\\n2) ..., \\n3) ..., etc.) so that subsequent points start on new lines.** Do NOT respond with a short fragment like "open source" or "free" – always use multiple full sentences.
+5. For "db_kompare_view", write an **8-line tech critique** in this exact format, one numbered sentence per line:
    1) Best architectural point.
    2) Business problem most suited, with a layman example understood by business students.
    3) Where it fails repeatedly in practice, with a layman example understood by business students.
@@ -231,11 +232,11 @@ Instructions:
    7) Other alternative databases / tools if those failures are a big concern.
    8) Pricing pressure and proposed big architectural changes over the next 2 years, plus 3 reference links used for this critique focused on failures/limitations from non-vendor sources and 2 reference links on pricing pressure and roadmap for the next 2 years by this vendor. Format these 5 links as HTML anchors like <a href="https://example.com" target="_blank">label</a> so they are clickable in a new page, and insert a newline character (\\n) before each anchor so every hyperlink appears on its own line.
    All lines MUST be numbered 1) to 8), each a full sentence ending with a period, and separated by newline characters (\\n) so every numbered point starts on a new line. Apart from the HTML anchor tags for links, all other text must be plain text (no additional HTML).
-5. For fields that require lists (e.g., supported_programming_languages, server_operating_systems, apis_and_other_access_methods, dbaas_offerings, implementation_language, partitioning_methods, queries, replication_methods, secondary_database_models), return a JSON array of strings.
-6. For boolean-like fields (e.g., "yes"/"no"), use "yes" or "no" as strings (lowercase) unless the field implies a more complex answer.
-7. Only return the JSON object.`;
+6. For fields that require lists (e.g., supported_programming_languages, server_operating_systems, apis_and_other_access_methods, dbaas_offerings, implementation_language, partitioning_methods, queries, replication_methods, secondary_database_models), return a JSON array of strings.
+7. For the following boolean-style fields: cloud_based_only, concurrency, data_scheme, durability, foreign_keys, in_memory_capabilities, mapreduce, secondary_indexes, triggers, typing, xml_support – you MUST return exactly "yes" or "no" (lowercase) as a simple string value. Do NOT return descriptive text like "ACID-compliant", "multi-version concurrency control (MVCC)", "relational", or "strongly typed" for these fields; only use "yes" or "no".
+8. Only return the JSON object.`;
 
-    console.log("[OpenAI Service] Sending request to OpenAI API for Database");
+    console.log(`[OpenAI Service] Sending request to OpenAI API for Database ${database?.name || ""}`);
     console.log("[OpenAI Service] Model: gpt-4o-mini");
 
     const response = await openai.chat.completions.create({
@@ -249,7 +250,7 @@ Instructions:
         { role: "user", content: prompt },
       ],
       temperature: 0.7,
-      max_tokens: 1000,
+      max_tokens: 2000,
     });
 
     console.log("[OpenAI Service] OpenAI API response received");

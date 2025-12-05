@@ -53,8 +53,6 @@ custom:
         - https://www.dbkompare.com
   serverless-offline:
     httpPort: 4000
-    enforceSecureCookies: false
-    apiKey: HPEBPWFPNU5aP2sWiDsis74HI7uXTgtj7VuPsG2o
 
   splitStacks:
     perFunction: true
@@ -450,6 +448,7 @@ functions:
 
   getDatabasesByIds:
     handler: functions/databases/getDatabaseByIds.handler
+    timeout: 300
     events:
       - http:
           path: /get-database-by-ids
