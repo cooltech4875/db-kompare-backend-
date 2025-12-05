@@ -27,11 +27,13 @@ const ALLOWED_VALUES = {
     2, // Api token
     3, // Kerberos
     4, // All
+    "DoesNotMatter",
   ],
   api_integration_with_upstream_downstream_systems: [
     "Yes but limited",
     "No",
     "Limited",
+    "DoesNotMatter",
   ],
   user_created_tags_comments: [
     "DoesNotMatter",
@@ -48,7 +50,7 @@ const ALLOWED_VALUES = {
   modern_ways_of_deployment: [
     1, // Kubernetes
     2, // Docker Containers
-    "3 Windows", // Only Windows
+    3, // Only Windows
     "DoesNotMatter",
   ],
   ai_capabilities: ["Yes", "No", "Limited"],
