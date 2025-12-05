@@ -59,6 +59,12 @@ export const handler = async (event) => {
         // Extract ui_popularity.totalScore
         const uiPopularity = metric?.ui_popularity;
 
+        // Skip if ui_popularity is missing or doesn't have totalScore
+        if (!uiPopularity || !uiPopularity.totalScore) {
+          console.log(`No ui_popularity or totalScore found for database_id: ${databaseId}, name: ${name}`);
+          return null;
+        }
+
         // Return the object containing database details and its popularity score
         return {
           databaseId,
@@ -68,12 +74,19 @@ export const handler = async (event) => {
       })
     );
 
-    // Filter out any null results (i.e., databases with no metrics)
-    const validDatabases = databasesWithRankings.filter(Boolean);
+    // Filter out any null results (i.e., databases with no metrics or no ui_popularity)
+    const validDatabases = databasesWithRankings.filter(
+      (db) => db && db.uiPopularity && db.uiPopularity.totalScore !== undefined
+    );
+
+    if (validDatabases.length === 0) {
+      console.log("No valid databases with ui_popularity found for ranking.");
+      return sendResponse(404, "No valid databases found for ranking.", null);
+    }
 
     // Sort the databases by ui_popularity.totalScore in descending order
     const sortedDatabases = validDatabases.sort(
-      (a, b) => b.uiPopularity.totalScore - a.uiPopularity.totalScore
+      (a, b) => (b.uiPopularity?.totalScore || 0) - (a.uiPopularity?.totalScore || 0)
     );
 
     // Create the rankings array for the day
