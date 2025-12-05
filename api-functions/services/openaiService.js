@@ -51,6 +51,7 @@ const ALLOWED_VALUES = {
     1, // Kubernetes
     2, // Docker Containers
     3, // Only Windows
+    4, // Windows and linux
     "DoesNotMatter",
   ],
   ai_capabilities: ["Yes", "No", "Limited"],
