@@ -117,10 +117,12 @@ export const handler = async (event) => {
       );
     }
 
-    // Filter out objects with ui_display set to "NO"
-    // const filteredData = items.filter((db) => db.ui_display !== "NO");
+    // Filter out objects with unknown db tool names
+    const filteredData = items.filter(
+      (db) => db?.dbToolName && db.dbToolName !== "Unknown"
+    );
 
-    return sendResponse(200, "Fetch metrics successfully", items);
+    return sendResponse(200, "Fetch metrics successfully", filteredData);
   } catch (error) {
     console.error("Error fetching metrics:", error);
     return sendResponse(500, "Failed to fetch metrics", {
