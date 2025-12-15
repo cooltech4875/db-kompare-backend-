@@ -198,6 +198,15 @@ functions:
           private: false
           cors: true
 
+  adjustFreeQuizCredits:
+    handler: functions/users/adjustFreeQuizCredits.handler
+    events:
+      - http:
+          path: /free-quiz-credits
+          method: post
+          private: true
+          cors: true
+
   createUserSchema:
     handler: functions/schemas/createUserSchema.handler
     events:
