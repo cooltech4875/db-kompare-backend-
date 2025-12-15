@@ -42,6 +42,13 @@ export const handler = async (event) => {
 
     const userDetails={
       ...userData.Item,
+      freeQuizCredits:
+        typeof userData.Item.freeQuizCredits === "number"
+          ? userData.Item.freeQuizCredits
+          : 2,
+      unlockedQuizIds: Array.isArray(userData.Item.unlockedQuizIds)
+        ? userData.Item.unlockedQuizIds
+        : [],
       metrics: {
         streak: metrics.streak,
         xp: metrics.xp,
