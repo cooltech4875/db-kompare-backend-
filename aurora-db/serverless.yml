@@ -20,6 +20,7 @@ provider:
         - dynamodb:UpdateItem
         - dynamodb:DeleteItem
         - dynamodb:BatchGetItem
+        - dynamodb:BatchWriteItem
         - dynamodb:Query
         - dynamodb:Scan
         - s3:ListBucket
@@ -34,6 +35,7 @@ provider:
         - "arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/db-kompare-fiddles-${self:provider.stage}/index/*"
         - "arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/db-kompare-users-${self:provider.stage}"
         - "arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/db-kompare-user-achievements-${self:provider.stage}"
+        - "arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/db-kompare-certification-plans-${self:provider.stage}"
   environment:
     PG_HOST: ${self:custom.outputs.AuroraClusterEndpoint}
     PG_USER: "dbadmin"
@@ -48,6 +50,7 @@ provider:
     SOLUTIONS_TABLE: db-kompare-solutions-${self:provider.stage}
     SUBMISSIONS_TABLE: db-kompare-submissions-${self:provider.stage}
     FIDDLES_TABLE: db-kompare-fiddles-${self:provider.stage}
+    CERTIFICATION_PLANS_TABLE: db-kompare-certification-plans-${self:provider.stage}
   apiGateway:
     apiKeys:
       - name: aurora-key
@@ -203,6 +206,15 @@ functions:
     events:
       - http:
           path: /free-quiz-credits
+          method: post
+          private: true
+          cors: true
+
+  createCertificationPlans:
+    handler: functions/certification-plans/createCertificationPlans.handler
+    events:
+      - http:
+          path: /certification-plans
           method: post
           private: true
           cors: true

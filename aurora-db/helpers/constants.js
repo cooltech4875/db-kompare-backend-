@@ -7,6 +7,7 @@ export const TABLE_NAME = {
   FIDDLES: process.env.FIDDLES_TABLE,
   USERS: process.env.USERS_TABLE,
   USER_ACHIEVEMENTS: process.env.USER_ACHIEVEMENTS_TABLE,
+  CERTIFICATION_PLANS: process.env.CERTIFICATION_PLANS_TABLE,
 };
 
 export const LessonCategory = {
@@ -39,4 +40,9 @@ export const Difficulty = {
 export const QuestionType = {
   INTERVIEW: "INTERVIEW",
   LESSON: "LESSON",
+};
+
+export const CERTIFICATION_PLAN_STATUS = {
+  ACTIVE: "ACTIVE",
+  INACTIVE: "INACTIVE",
 };
