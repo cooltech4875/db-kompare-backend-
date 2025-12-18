@@ -228,6 +228,15 @@ functions:
           private: true
           cors: true
 
+  updateCertificationPlanStatus:
+    handler: functions/certification-plans/updateCertificationPlanStatus.handler
+    events:
+      - http:
+          path: /certification-plans/status
+          method: put
+          private: true
+          cors: true
+
   createUserSchema:
     handler: functions/schemas/createUserSchema.handler
     events:
