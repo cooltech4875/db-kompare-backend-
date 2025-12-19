@@ -228,6 +228,15 @@ functions:
           private: true
           cors: true
 
+  getCertificationPlanById:
+    handler: functions/certification-plans/getCertificationPlanById.handler
+    events:
+      - http:
+          path: /certification-plans/{id}
+          method: get
+          private: true
+          cors: true
+
   updateCertificationPlanStatus:
     handler: functions/certification-plans/updateCertificationPlanStatus.handler
     events:

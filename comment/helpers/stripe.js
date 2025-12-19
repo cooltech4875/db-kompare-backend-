@@ -46,6 +46,10 @@ async function createPaymentIntent({
     currency: currency,
     customer: customerId,
     payment_method: paymentMethodId,
+    automatic_payment_methods: {
+      enabled: true,
+      allow_redirects: 'never'
+    },
     // off_session: true,
     // confirm: true,
     metadata

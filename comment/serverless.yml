@@ -17,6 +17,7 @@ custom:
   dbRankingCategoriesTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.DB_RANKING_CATEGORIES_TABLE}
   quizSubmissionsTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.QUIZZES_SUBMISSIONS_TABLE}
   databasesTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.DATABASES_TABLE}
+  certificationPlansTableArn: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.CERTIFICATION_PLANS_TABLE}
 
   serverless-offline:
     httpPort: 4000
@@ -44,6 +45,7 @@ provider:
     DB_RANKING_CATEGORIES_TABLE: db-kompare-dbrankings-categories-${self:provider.stage}
     QUIZZES_SUBMISSIONS_TABLE: db-kompare-quiz-submissions-${self:provider.stage}
     DATABASES_TABLE: db-kompare-databases-${self:provider.stage}
+    CERTIFICATION_PLANS_TABLE: db-kompare-certification-plans-${self:provider.stage}
 
 
   apiGateway:
@@ -83,6 +85,8 @@ provider:
             - ${self:custom.quizSubmissionsTableArn}/index/* # Permission for quiz submissions table indexes
             - ${self:custom.databasesTableArn} # Permission for databases table
             - ${self:custom.databasesTableArn}/index/* # Permission for databases table indexes
+            - ${self:custom.certificationPlansTableArn} # Permission for certification plans table
+            - ${self:custom.certificationPlansTableArn}/index/* # Permission for certification plans table indexes
 
 functions:
   createComment:
@@ -194,6 +198,17 @@ functions:
     events:
       - http:
           path: /create-payment-intent
+          method: post
+          private: true
+          cors: true
+    layers:
+      - arn:aws:lambda:${self:provider.region}:${aws:accountId}:layer:stripe-layer:2
+
+  createCertificationPlanPaymentIntent:
+    handler: functions/user-payments/createCertificationPlanPaymentIntent.handler
+    events:
+      - http:
+          path: /create-certification-plan-payment-intent
           method: post
           private: true
           cors: true
