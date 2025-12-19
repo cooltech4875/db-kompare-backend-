@@ -41,26 +41,23 @@ export const handler = async (event) => {
     const certificationsUnlocked = plan.certificationsUnlocked || 0;
 
     if (planPrice === 0) {
-      const currentCredits = typeof user.certificateCredits === "number" ? user.certificateCredits : 0;
-      const newCredits = currentCredits + certificationsUnlocked;
+      const currentFreeQuizCredits = typeof user.freeQuizCredits === "number" ? user.freeQuizCredits : 0;
+      const newFreeQuizCredits = currentFreeQuizCredits + certificationsUnlocked;
 
       await updateItemInDynamoDB({
         table: TABLE_NAME.USERS,
         Key: { id: userId },
-        UpdateExpression: "SET certificateCredits = :newCredits, updatedAt = :u",
+        UpdateExpression: "SET freeQuizCredits = :newFreeQuizCredits, updatedAt = :u",
         ExpressionAttributeValues: {
-          ":newCredits": newCredits,
+          ":newFreeQuizCredits": newFreeQuizCredits,
           ":u": getTimestamp(),
         },
       });
 
-      const message = `Plan activated successfully! You had ${currentCredits} credits, ${certificationsUnlocked} credits added. Total credits: ${newCredits}`;
+      const message = `Plan activated successfully! Free quiz credits added: ${certificationsUnlocked}. Total free quiz credits: ${newFreeQuizCredits}`;
 
       return sendResponse(200, message, {
-        certificateCredits: newCredits,
-        previousCredits: currentCredits,
-        creditsAdded: certificationsUnlocked,
-        totalCredits: newCredits,
+        freeQuizCredits: newFreeQuizCredits,
       });
     }
 
@@ -106,26 +103,23 @@ export const handler = async (event) => {
 
     // If payment succeeded, update user credits
     if (confirmedIntent.status === 'succeeded') {
-      const currentCredits = typeof user.certificateCredits === "number" ? user.certificateCredits : 0;
-      const newCredits = currentCredits + certificationsUnlocked;
+      const currentFreeQuizCredits = typeof user.freeQuizCredits === "number" ? user.freeQuizCredits : 0;
+      const newFreeQuizCredits = currentFreeQuizCredits + certificationsUnlocked;
 
       await updateItemInDynamoDB({
         table: TABLE_NAME.USERS,
         Key: { id: userId },
-        UpdateExpression: "SET certificateCredits = :newCredits, updatedAt = :u",
+        UpdateExpression: "SET freeQuizCredits = :newFreeQuizCredits, updatedAt = :u",
         ExpressionAttributeValues: {
-          ":newCredits": newCredits,
+          ":newFreeQuizCredits": newFreeQuizCredits,
           ":u": getTimestamp(),
         },
       });
 
-      const message = `Payment completed successfully! You had ${currentCredits} credits, ${certificationsUnlocked} credits added. Total credits: ${newCredits}`;
+      const message = `Payment completed successfully! Free quiz credits added: ${certificationsUnlocked}. Total free quiz credits: ${newFreeQuizCredits}`;
 
       return sendResponse(200, message, {
-        certificateCredits: newCredits,
-        previousCredits: currentCredits,
-        creditsAdded: certificationsUnlocked,
-        totalCredits: newCredits,
+        freeQuizCredits: newFreeQuizCredits,
       });
     }
 
