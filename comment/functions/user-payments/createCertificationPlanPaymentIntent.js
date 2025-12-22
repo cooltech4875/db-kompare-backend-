@@ -36,30 +36,8 @@ export const handler = async (event) => {
       return sendResponse(404, "Plan not found", null);
     }
 
-    // Handle free plans
     const planPrice = plan.price || 0;
     const certificationsUnlocked = plan.certificationsUnlocked || 0;
-
-    if (planPrice === 0) {
-      const currentFreeQuizCredits = typeof user.freeQuizCredits === "number" ? user.freeQuizCredits : 0;
-      const newFreeQuizCredits = currentFreeQuizCredits + certificationsUnlocked;
-
-      await updateItemInDynamoDB({
-        table: TABLE_NAME.USERS,
-        Key: { id: userId },
-        UpdateExpression: "SET freeQuizCredits = :newFreeQuizCredits, updatedAt = :u",
-        ExpressionAttributeValues: {
-          ":newFreeQuizCredits": newFreeQuizCredits,
-          ":u": getTimestamp(),
-        },
-      });
-
-      const message = `Plan activated successfully! Free quiz credits added: ${certificationsUnlocked}. Total free quiz credits: ${newFreeQuizCredits}`;
-
-      return sendResponse(200, message, {
-        freeQuizCredits: newFreeQuizCredits,
-      });
-    }
 
     // Ensure Stripe Customer exists
     let stripeCustomerId = user.stripeCustomerId;
