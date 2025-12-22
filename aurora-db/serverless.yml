@@ -210,6 +210,15 @@ functions:
           private: true
           cors: true
 
+  consumeFreePlan:
+    handler: functions/users/consumeFreePlan.handler
+    events:
+      - http:
+          path: /consume-free-plan
+          method: post
+          private: true
+          cors: true
+
   createCertificationPlans:
     handler: functions/certification-plans/createCertificationPlans.handler
     events:

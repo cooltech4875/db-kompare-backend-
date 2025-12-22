@@ -49,6 +49,7 @@ export const handler = async (event) => {
       unlockedQuizIds: Array.isArray(userData.Item.unlockedQuizIds)
         ? userData.Item.unlockedQuizIds
         : [],
+      hasClaimedFreePlan: userData.Item.hasClaimedFreePlan === true ? true : false,
       metrics: {
         streak: metrics.streak,
         xp: metrics.xp,

@@ -11,6 +11,10 @@ export const handler = async (event) => {
       return sendResponse(400, "userId is required", null);
     }
 
+    if (!quizId) {
+      return sendResponse(400, "quizId is required", null);
+    }
+
     const deltaValue = Number(delta);
     if (Number.isNaN(deltaValue)) {
       return sendResponse(400, "delta must be a number", null);
@@ -35,14 +39,6 @@ export const handler = async (event) => {
       );
     }
 
-    if (deltaValue < 0 && !quizId) {
-      return sendResponse(
-        400,
-        "quizId is required when consuming a free quiz credit",
-        null
-      );
-    }
-
     let UpdateExpression = "SET freeQuizCredits = :newCredits, updatedAt = :updatedAt";
     const ExpressionAttributeValues = {
       ":newCredits": newCredits,
@@ -50,7 +46,7 @@ export const handler = async (event) => {
       ":emptyList": [],
     };
 
-    if (deltaValue < 0 && quizId) {
+    if (deltaValue < 0) {
       UpdateExpression +=
         ", unlockedQuizIds = list_append(if_not_exists(unlockedQuizIds, :emptyList), :quizIdList)";
       ExpressionAttributeValues[":quizIdList"] = [quizId];
@@ -70,6 +66,7 @@ export const handler = async (event) => {
     return sendResponse(200, "Free quiz credits updated", {
       freeQuizCredits: result.Attributes?.freeQuizCredits ?? newCredits,
       unlockedQuizIds: result.Attributes?.unlockedQuizIds || [],
+      hasClaimedFreePlan: result.Attributes?.hasClaimedFreePlan === true ? true : false,
       updatedAt: result.Attributes?.updatedAt,
     });
   } catch (error) {

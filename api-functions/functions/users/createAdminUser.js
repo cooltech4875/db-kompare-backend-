@@ -75,6 +75,10 @@ export const handler = async (event, context, callback) => {
       email,
       name: username,
       role: USER_ROLE.ADMIN,
+      certificateCredits: 0,
+      freeQuizCredits: 2,
+      unlockedQuizIds: [],
+      hasClaimedFreePlan: false,
       status: USER_STATUS.ACTIVE,
     };
 

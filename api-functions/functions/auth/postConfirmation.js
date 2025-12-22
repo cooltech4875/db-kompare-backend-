@@ -63,6 +63,7 @@ export const handler = async (event, context, callback) => {
       certificateCredits: 0,
       freeQuizCredits: 2,
       unlockedQuizIds: [],
+      hasClaimedFreePlan: false,
       status: USER_STATUS.ACTIVE, // Set the user's status to ACTIVE
       loggedAt, // Store timestamp
     };
