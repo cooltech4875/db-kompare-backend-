@@ -35,25 +35,23 @@ async function detachPaymentMethod(paymentMethodId) {
 
 async function createPaymentIntent({
   customerId,
-  paymentMethodId,
   amount,
   metadata = {},
   currency= 'eur'
 
 }) {
-  return await stripe.paymentIntents.create({
+  const paymentIntentParams = {
     amount: amount,
     currency: currency,
     customer: customerId,
-    payment_method: paymentMethodId,
     automatic_payment_methods: {
       enabled: true,
       allow_redirects: 'never'
     },
-    // off_session: true,
-    // confirm: true,
     metadata
-  });
+  };
+
+  return await stripe.paymentIntents.create(paymentIntentParams);
 }
 
 async function retrievePaymentIntent(paymentIntentId) {

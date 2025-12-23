@@ -15,10 +15,19 @@ import { createCustomer, createPaymentIntent } from "../../helpers/stripe.js";
  */
 export const handler = async (event) => {
   try {
-    const { userId, paymentMethodId } = JSON.parse(event.body);
+    const { userId, amount, currency } = JSON.parse(event.body);
+    
+    // Validate required fields
     if (!userId) {
-      return sendResponse(400, "Missing userId or certificateId", null);
+      return sendResponse(400, "Missing userId", null);
     }
+    
+    if (!amount || amount <= 0) {
+      return sendResponse(400, "Missing or invalid amount", null);
+    }
+
+    // Default currency to 'eur' if not provided
+    const paymentCurrency = currency || "eur";
 
     // 1. Fetch user record from DynamoDB
     const userRes = await getItem(TABLE_NAME.USERS, { id: userId });
@@ -27,38 +36,36 @@ export const handler = async (event) => {
       return sendResponse(404, "User not found", null);
     }
 
-    // 2. Ensure Stripe Customer
+    // 2. Ensure Stripe Customer exists
     let stripeCustomerId = user.stripeCustomerId;
+    if (!stripeCustomerId) {
+      // Create Stripe Customer
+      const customer = await createCustomer({
+        email: user.email,
+        name: user.name,
+        metadata: { userId },
+      });
 
-    // if (!stripeCustomerId) {
-    //   // Create Stripe Customer
-    //   const customer = await createCustomer({
-    //     email: user.email,
-    //     name: user.name,
-    //     metadata: { userId },
-    //   });
-
-    //   console.log("Created Stripe Customer:", customer);
-    //   stripeCustomerId = customer.id;
-    //   // Persist stripeCustomerId to DynamoDB
-    //   await updateItemInDynamoDB({
-    //     table: TABLE_NAME.USERS,
-    //     Key: { id: userId },
-    //     UpdateExpression: "SET stripeCustomerId = :scid, updatedAt = :u",
-    //     ExpressionAttributeValues: {
-    //       ":scid": stripeCustomerId,
-    //       ":u": new Date().toISOString(),
-    //     },
-    //   });
-    // }
+      console.log("Created Stripe Customer:", customer);
+      stripeCustomerId = customer.id;
+      // Persist stripeCustomerId to DynamoDB
+      await updateItemInDynamoDB({
+        table: TABLE_NAME.USERS,
+        Key: { id: userId },
+        UpdateExpression: "SET stripeCustomerId = :scid, updatedAt = :u",
+        ExpressionAttributeValues: {
+          ":scid": stripeCustomerId,
+          ":u": getTimestamp(),
+        },
+      });
+    }
 
     console.log("Using Stripe Customer ID:", stripeCustomerId);
     // 4. Create a PaymentIntent for a paid certificate
     const paymentIntent = await createPaymentIntent({
-      amount: 1000, // €10.00 in cents
-      currency: "eur",
-      // customerId: stripeCustomerId,
-      paymentMethodId: paymentMethodId,
+      amount: amount, // Amount in cents from frontend
+      currency: paymentCurrency,
+      customerId: stripeCustomerId,
     });
 
     return sendResponse(200, "Payment required", {
