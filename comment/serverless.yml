@@ -215,6 +215,15 @@ functions:
     layers:
       - arn:aws:lambda:${self:provider.region}:${aws:accountId}:layer:stripe-layer:2
 
+  updateUserCreditsFromPlan:
+    handler: functions/user-payments/updateUserCreditsFromPlan.handler
+    events:
+      - http:
+          path: /update-user-credits-from-plan
+          method: post
+          private: true
+          cors: true
+
   # --------------- DB TOOL CATEGORIES FUNCTIONS -------------
   addDbToolCategory:
     handler: functions/dbtools-categories/addDbToolCategory.handler
