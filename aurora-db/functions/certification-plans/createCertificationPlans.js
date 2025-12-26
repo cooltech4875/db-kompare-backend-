@@ -10,6 +10,7 @@ const plans = [
     description: "For database professionals",
     price: 0,
     certificationsUnlocked: 1,
+    iapProductId: "",
     features: [
       "Unlock 1 certification",
       "Access to certification quizzes",
@@ -26,6 +27,7 @@ const plans = [
     description: "Perfect for beginners",
     price: 59.9,
     certificationsUnlocked: 2,
+    iapProductId: "com.dbkompare.starter.pack",
     features: [
       "Unlock 2 certifications",
       "Access to certification quizzes",
@@ -42,6 +44,7 @@ const plans = [
     description: "Best for serious learners",
     price: 79.9,
     certificationsUnlocked: 3,
+    iapProductId: "com.dbkompare.professional.pack",
     features: [
       "Unlock 3 certifications",
       "Access to certification quizzes",
@@ -58,6 +61,7 @@ const plans = [
     description: "For database professionals",
     price: 89.9,
     certificationsUnlocked: 5,
+    iapProductId: "com.dbkompare.expert.pack",
     features: [
       "Unlock 5 certifications",
       "Access to certification quizzes",
@@ -74,6 +78,7 @@ const plans = [
     description: "COMPLETE MASTERY PACKAGE",
     price: 99.9,
     certificationsUnlocked: 10,
+    iapProductId: "com.dbkompare.master.pack",
     features: [
       "Unlock 10 certifications",
       "Access to certification quizzes",
@@ -105,6 +110,7 @@ export const handler = async (event) => {
         description = "",
         price = 0,
         certificationsUnlocked = 0,
+        iapProductId = "",
         features = [],
         status = CERTIFICATION_PLAN_STATUS.ACTIVE,
       } = plan;
@@ -146,6 +152,7 @@ export const handler = async (event) => {
         description: description.trim(),
         price: Number(price),
         certificationsUnlocked: Number(certificationsUnlocked),
+        iapProductId: iapProductId ? String(iapProductId).trim() : "",
         features: features.map((f) => String(f).trim()),
         status: status.toUpperCase(),
         createdAt: getTimestamp(),
