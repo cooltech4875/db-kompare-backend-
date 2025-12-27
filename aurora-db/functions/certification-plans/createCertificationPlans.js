@@ -27,7 +27,7 @@ const plans = [
     description: "Perfect for beginners",
     price: 59.9,
     certificationsUnlocked: 2,
-    iapProductId: "com.dbkompare.starter.pack",
+    iapProductId: "com.dbkompare.starter.plan",
     features: [
       "Unlock 2 certifications",
       "Access to certification quizzes",
@@ -44,7 +44,7 @@ const plans = [
     description: "Best for serious learners",
     price: 79.9,
     certificationsUnlocked: 3,
-    iapProductId: "com.dbkompare.professional.pack",
+    iapProductId: "com.dbkompare.professional.plan",
     features: [
       "Unlock 3 certifications",
       "Access to certification quizzes",
@@ -61,7 +61,7 @@ const plans = [
     description: "For database professionals",
     price: 89.9,
     certificationsUnlocked: 5,
-    iapProductId: "com.dbkompare.expert.pack",
+    iapProductId: "com.dbkompare.expert.plan",
     features: [
       "Unlock 5 certifications",
       "Access to certification quizzes",
@@ -78,7 +78,7 @@ const plans = [
     description: "COMPLETE MASTERY PACKAGE",
     price: 99.9,
     certificationsUnlocked: 10,
-    iapProductId: "com.dbkompare.master.pack",
+    iapProductId: "com.dbkompare.master.plan",
     features: [
       "Unlock 10 certifications",
       "Access to certification quizzes",
