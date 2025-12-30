@@ -224,6 +224,15 @@ functions:
           private: true
           cors: true
 
+  updateUserCreditsFromInAppPurchase:
+    handler: functions/user-payments/updateUserCreditsFromInAppPurchase.handler
+    events:
+      - http:
+          path: /update-user-credits-from-inapp-purchase
+          method: post
+          private: true
+          cors: true
+
   # --------------- DB TOOL CATEGORIES FUNCTIONS -------------
   addDbToolCategory:
     handler: functions/dbtools-categories/addDbToolCategory.handler
