@@ -23,7 +23,7 @@ export const handler = async (event) => {
     const params = event.queryStringParameters || {};
     const status = params.status || QUERY_STATUS.ACTIVE;
     const userId = params.userId;
-    const groupId = params.groupId || null;
+    const groupName = params.groupName || null;
     const difficulty = params.difficulty || null; // optional filter
 
     // 2. Fetch all quizzes matching the status
@@ -40,10 +40,13 @@ export const handler = async (event) => {
       quizzes = quizzes.filter((q) => q.difficulty === difficulty);
     }
 
-    // 2b. If groupId provided, filter quizzes by the group's quizIds
-    if (groupId) {
+    // 2b. If groupName provided, filter quizzes by the group's quizIds
+    if (groupName) {
       const groups = await fetchAllItemsByScan({ TableName: TABLE_NAME.GROUPS });
-      const selectedGroup = groups.find((g) => g.id === groupId);
+      const normalize = (v) => String(v || "").trim().toLowerCase();
+      const selectedGroup = groups.find(
+        (g) => normalize(g?.name) === normalize(groupName)
+      );
 
       if (!selectedGroup) {
         return sendResponse(200, "No quizzes for this group", []);

@@ -1,6 +1,10 @@
 // src/functions/groups/createGroup.js
 
-import { createItemInDynamoDB, getNextGroupId } from "../../helpers/dynamodb.js";
+import {
+  createItemInDynamoDB,
+  fetchAllItemsByScan,
+  getNextGroupId,
+} from "../../helpers/dynamodb.js";
 import { v4 as uuidv4 } from "uuid";
 import { TABLE_NAME, USER_ROLE } from "../../helpers/constants.js";
 import {
@@ -21,6 +25,20 @@ export const handler = async (event) => {
 
     if (!Array.isArray(quizIds)) {
       return sendResponse(400, '"quizIds" must be an array', null);
+    }
+
+    // Validate uniqueness of group name (case-insensitive, trimmed)
+    const normalizedName = String(name).trim().toLowerCase();
+    const existingGroups = await fetchAllItemsByScan({
+      TableName: TABLE_NAME.GROUPS,
+    });
+    const nameAlreadyExists = (Array.isArray(existingGroups)
+      ? existingGroups
+      : []
+    ).some((g) => String(g?.name || "").trim().toLowerCase() === normalizedName);
+
+    if (nameAlreadyExists) {
+      return sendResponse(400, "Group name must be unique", null);
     }
 
     // Generate the next group ID automatically
