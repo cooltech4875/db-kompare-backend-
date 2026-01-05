@@ -175,6 +175,7 @@ provider:
             - ${self:custom.dbToolsTableArn}/index/byStatus
             - ${self:custom.dbToolsTableArn}/index/byCategoryAndStatus
             - ${self:custom.blogsTableArn}/index/byIsPublished
+            - ${self:custom.blogsTableArn}/index/byTitle
             - ${self:custom.usersTableArn}/index/byEmail
             - ${self:custom.metricesTableArn}/index/byStatusAndDate
             - ${self:custom.dbToolsMetricesTableArn}/index/byStatusAndDate

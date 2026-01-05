@@ -1,4 +1,4 @@
-import { getItem } from "../../helpers/dynamodb.js";
+import { fetchAllItemByDynamodbIndex, getItem } from "../../helpers/dynamodb.js";
 import { TABLE_NAME } from "../../helpers/constants.js";
 import { sendResponse } from "../../helpers/helpers.js";
 
@@ -11,13 +11,31 @@ export const handler = async (event) => {
       return sendResponse(400, "Missing blog ID", false);
     }
 
-    const blogItem = await getItem(TABLE_NAME.BLOGS, { id });
+    // 1) First try to fetch by primary key (id) - backward compatible
+    let blogItem = await getItem(TABLE_NAME.BLOGS, { id });
+
+    // 2) If not found by id, treat the same path param as blog title and query the byTitle index
+    if (!blogItem || !blogItem.Item) {
+      const matches = await fetchAllItemByDynamodbIndex({
+        TableName: TABLE_NAME.BLOGS,
+        IndexName: "byTitle",
+        KeyConditionExpression: "#title = :title",
+        ExpressionAttributeNames: { "#title": "title" },
+        ExpressionAttributeValues: { ":title": id },
+      });
+
+      if (Array.isArray(matches) && matches.length) {
+        blogItem = { Item: matches[0] };
+      }
+    }
 
     if (!blogItem || !blogItem.Item) {
       return sendResponse(404, "Blog not found", false);
     }
 
     const blogDetails = { ...blogItem.Item };
+    const resolvedBlogId = blogDetails?.id;
+    console.log("🚀 ~ resolvedBlogId:", resolvedBlogId);
 
     // Fetch user details for createdBy
     if (blogDetails.createdBy) {
@@ -26,7 +44,7 @@ export const handler = async (event) => {
 
     // Check if the blog is saved in the user's SavedBlogs
     if (userId) {
-      const isSaved = await checkIfBlogIsSaved(userId, id);
+      const isSaved = await checkIfBlogIsSaved(userId, resolvedBlogId);
       blogDetails.isSaved = isSaved;
     } else {
       blogDetails.isSaved = false; // Default to false if userId is not provided

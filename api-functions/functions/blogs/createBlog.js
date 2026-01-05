@@ -1,4 +1,8 @@
-import { createItemInDynamoDB, getNextBlogId } from "../../helpers/dynamodb.js";
+import {
+  createItemInDynamoDB,
+  fetchAllItemByDynamodbIndex,
+  getNextBlogId,
+} from "../../helpers/dynamodb.js";
 import { TABLE_NAME } from "../../helpers/constants.js";
 import { getTimestamp, sendResponse } from "../../helpers/helpers.js";
 
@@ -18,6 +22,24 @@ export const handler = async (event) => {
       return sendResponse(400, "Missing or invalid fields", false);
     }
 
+    const trimmedTitle = String(title).trim();
+    if (!trimmedTitle) {
+      return sendResponse(400, "Missing or invalid fields", false);
+    }
+
+    // Validate uniqueness of blog title (exact match) via byTitle index
+    const existingBlogs = await fetchAllItemByDynamodbIndex({
+      TableName: TABLE_NAME.BLOGS,
+      IndexName: "byTitle",
+      KeyConditionExpression: "#title = :title",
+      ExpressionAttributeNames: { "#title": "title" },
+      ExpressionAttributeValues: { ":title": trimmedTitle },
+    });
+
+    if (Array.isArray(existingBlogs) && existingBlogs.length) {
+      return sendResponse(400, "Blog title must be unique", false);
+    }
+
     // Generate the next blog ID automatically
     const blogId = await getNextBlogId(TABLE_NAME.BLOG_COUNTER);
 
@@ -26,7 +48,7 @@ export const handler = async (event) => {
       blogId: blogId,
       createdBy,
       createdAt: getTimestamp(),
-      title,
+      title: trimmedTitle,
       description,
       databases,
       status,
