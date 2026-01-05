@@ -16,16 +16,29 @@ export const handler = async (event) => {
 
     // 2) If not found by id, treat the same path param as blog title and query the byTitle index
     if (!blogItem || !blogItem.Item) {
-      const matches = await fetchAllItemByDynamodbIndex({
-        TableName: TABLE_NAME.BLOGS,
-        IndexName: "byTitle",
-        KeyConditionExpression: "#title = :title",
-        ExpressionAttributeNames: { "#title": "title" },
-        ExpressionAttributeValues: { ":title": id },
-      });
+      // Some clients may send encoded/plus-form titles in the path; try a few safe variants
+      const candidates = new Set([id]);
+      candidates.add(String(id).replace(/\+/g, " "));
+      try {
+        candidates.add(decodeURIComponent(id));
+      } catch (_) {}
+      try {
+        candidates.add(decodeURIComponent(String(id).replace(/\+/g, " ")));
+      } catch (_) {}
 
-      if (Array.isArray(matches) && matches.length) {
-        blogItem = { Item: matches[0] };
+      for (const titleCandidate of candidates) {
+        const matches = await fetchAllItemByDynamodbIndex({
+          TableName: TABLE_NAME.BLOGS,
+          IndexName: "byTitle",
+          KeyConditionExpression: "#title = :title",
+          ExpressionAttributeNames: { "#title": "title" },
+          ExpressionAttributeValues: { ":title": titleCandidate },
+        });
+
+        if (Array.isArray(matches) && matches.length) {
+          blogItem = { Item: matches[0] };
+          break;
+        }
       }
     }
 
